@@ -12,9 +12,13 @@ import {
 import {useNavigation} from '@react-navigation/native';
 import DocumentPicker from 'react-native-document-picker';
 import Icon from 'react-native-vector-icons/FontAwesome';
+import {useMyContext} from '../Components/MyContext';
 import axios from 'axios';
 Icon.loadFont();
 const FilesScreen: React.FC<{navigation: any}> = ({navigation}) => {
+  const {
+    deleteFile
+  } = useMyContext();
   useEffect(() => {
     // Show the alert when the component mounts
     Alert.alert(
@@ -32,7 +36,18 @@ const FilesScreen: React.FC<{navigation: any}> = ({navigation}) => {
   const [files, setFiles] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-
+  const deleteBmpFile = async (selectedFile) =>{
+    Alert.alert('File Deletion', `You Want to Delete: ${selectedFile}`, [
+      {
+        text: 'Delete',
+        onPress: () => deleteFile(selectedFile),
+        style: 'delete',
+      },
+      {text: 'Cancel', onPress: () => console.log('Deletion Cancelled')},
+    ]);
+    console.log("File selected for deletion:",selectedFile);
+    
+  };
   const pickFile = async () => {
     try {
       const result = await DocumentPicker.pickSingle({
@@ -84,31 +99,31 @@ const FilesScreen: React.FC<{navigation: any}> = ({navigation}) => {
     }
   };
 
-  const deleteFile = async filename => {
-    try {
-      // const response = await axios.post(`http://192.168.4.1/delete?filename=${encodedFilename}`);
-      const response = await axios.post(
-        `http://192.168.4.1/delete`,
-        new URLSearchParams({
-          filename: filename,
-        }),
-        {
-          headers: {
-            'Content-Type': 'application/x-www-form-urlencoded',
-          },
-        },
-      );
-      // Show success alert and refresh the file list
-      Alert.alert('Success', 'File deleted successfully');
-      fetchFiles(); // Refresh the file list
-    } catch (error) {
-      // Show error alert
-      Alert.alert(
-        'Error',
-        error.response ? error.response.data : 'Failed to delete file',
-      );
-    }
-  };
+  // const deleteFile = async filename => {
+  //   try {
+  //     // const response = await axios.post(`http://192.168.4.1/delete?filename=${encodedFilename}`);
+  //     const response = await axios.post(
+  //       `http://192.168.4.1/delete`,
+  //       new URLSearchParams({
+  //         filename: filename,
+  //       }),
+  //       {
+  //         headers: {
+  //           'Content-Type': 'application/x-www-form-urlencoded',
+  //         },
+  //       },
+  //     );
+  //     // Show success alert and refresh the file list
+  //     Alert.alert('Success', 'File deleted successfully');
+  //     fetchFiles(); // Refresh the file list
+  //   } catch (error) {
+  //     // Show error alert
+  //     Alert.alert(
+  //       'Error',
+  //       error.response ? error.response.data : 'Failed to delete file',
+  //     );
+  //   }
+  // };
   const fetchFiles = async () => {
     setLoading(true);
     try {
@@ -126,18 +141,13 @@ const FilesScreen: React.FC<{navigation: any}> = ({navigation}) => {
   // Handle file selection
   const handleSelect = filename => {
     setSelectedFile(filename);
-    //  Alert.alert('File Selected', `You selected: ${filename}`);
-    Alert.alert('File Selected', `You selected: ${filename}`, [
-      //   {
-      //     text: 'Select File',
-      //     onPress: () => console.log('Ask me later pressed'),
-      //   },
+    Alert.alert('File Selected', `You selected: ${selectedFile}`, [
       {
         text: 'Delete',
-        onPress: () => deleteFile(selectedFile),
+        onPress: () => deleteBmpFile(selectedFile),
         style: 'cancel',
       },
-      {text: 'Cancel', onPress: () => console.log('OK Pressed')},
+      {text: 'Cancel', onPress: () => console.log('Deletion Cancelled')},
     ]);
   };
 
@@ -183,12 +193,13 @@ const FilesScreen: React.FC<{navigation: any}> = ({navigation}) => {
         data={files}
         renderItem={({item}) => (
           <>
-            <TouchableOpacity onPress={() => handleSelect(item)}>
-              <Text>{item}</Text>
+            <TouchableOpacity onPress={() => handleSelect(item)} style={{ flexDirection: 'row', alignItems: 'center', padding:10 }}>
+              <Text style={{padding:2, fontSize:14,marginRight: 10,fontWeight: 'bold'}}>{item}</Text>
+              <Text></Text><Icon name="trash-o" size={20} color="#FF0000" />
             </TouchableOpacity>
-            <TouchableOpacity onPress={() => deleteFile(item)}>
-              <Icon name="trash-o" size={20} color="#000" />
-            </TouchableOpacity>
+            {/* <TouchableOpacity onPress={() => deleteFile(item)}>
+              <Icon name="trash-o" size={20} color="#FF0000" />
+            </TouchableOpacity> */}
           </>
         )}
       />

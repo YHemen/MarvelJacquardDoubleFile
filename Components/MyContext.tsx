@@ -57,39 +57,8 @@ export const MyContextProvider: React.FC<{children: ReactNode}> = ({
   const [strFiles, setStrFiles] = useState();
   const [imageData, setImageData] = useState();
 
-  //const [deviceid, setDeviceId] = useState('34:85:18:94:15:41');
-  // const [deviceid, setDeviceId] = useState('34:85:18:94:1D:DD');
-  // const [serviceid, setServiceId] = useState(
-  //   '4fafc201-1fb5-459e-8fcc-c5c9c331914b',
-  // );
-  // const [caracid, setCaracId] = useState(
-  //   'beb5483e-36e1-4685-b7f5-ea07361b26a8',
-  // );
-  // const [caracid1, setCaracId1] = useState(
-  //   'beb5483e-36e1-4686-b7f5-ea07361b26a8',
-  // );
-  // const [caracid2, setCaracId2] = useState(
-  //   'beb5483e-36e1-4687-b7f5-ea07361b26a8',
-  // );
-  // const [caracid3, setCaracId3] = useState(
-  //   'beb5483e-36e1-4688-b7f5-ea07361b26a8',
-  // );
-  // const [serviceid1, setServiceId1] = useState(
-  //   '4fafc202-1fb5-459e-8fcc-c5c9c331914b',
-  // );
-  // const [caracid4, setCaracId4] = useState(
-  //   'beb5483e-36e2-4670-b7f5-ea07361b26a8',
-  // );
-  // const [caracid5, setCaracId5] = useState(
-  //   'beb5483e-36e2-4671-b7f5-ea07361b26a8',
-  // );
-  // const [caracid7, setCaracId7] = useState(
-  //   'beb5483e-36e2-4680-b7f5-ea07361b26a8',
-  // );
-  // const [caracid8, setCaracId8] = useState(
-  //   'beb5483e-36e1-4689-b7f5-ea07361b26a8',
-  // );
-  let deviceid ="34:85:18:94:1D:D9";
+ 
+  // let deviceid ="34:85:18:94:1D:D9";
   let serviceid1 ="4fafc201-1fb5-459e-8fcc-c5c9c331914b";
   let caracid1 = "beb5483e-36e1-4685-b7f5-ea07361b26a8";
   let caracid2 = "beb5483e-36e1-4686-b7f5-ea07361b26a8";
@@ -102,11 +71,16 @@ export const MyContextProvider: React.FC<{children: ReactNode}> = ({
   let caracid5 = "beb5483e-36e1-4689-b7f5-ea07361b26a8";
   const [isScanning, setIsScanning] = useState<boolean>(false);
   const [isConnected, setIsConnected] = useState<boolean>(false);
-  const [selectedDevice, setSelectedDevice] = useState<Peripheral>();
+  // const [selectedDevice, setSelectedDevice] = useState<Peripheral>();
   const [bleDevice, setDevice] = useState([]);
   const [bluetoothDevices, setBluetoothDevices] = useState([]);
   // const [bleDevices, setDevices] = useState([]);
   const [currentDevice, setCurrentDevice] = useState<any>(null);
+  const [deviceId, setDeviceId] = useState(null);
+  // const [devices, setDevices] = useState([]);
+  // const [serviceUUIDs, setServiceUUIDs] = useState([]); // State for service UUIDs
+  // const [characteristicUUIDs, setCharacteristicUUIDs] = useState([]); // State for characteristic UUIDs
+
   const [sdFiles, setSdFiles] = useState([]);
   const [prevFile,setPrevFile] = useState();
   const [rpmValue, setrpmValue] = useState();
@@ -121,6 +95,10 @@ export const MyContextProvider: React.FC<{children: ReactNode}> = ({
   const [data,setData] = useState();
   const [height, setHeight] = useState('');
   const [width, setWidth] = useState('');
+  const [cnCount, setCnCount] = useState(0);
+  const [cardCount, setCardCount] = useState(8);
+  const [ttlHook,setTtlHook] = useState(0);
+  const [designDir,setDesignDir] = useState('');
   const BleManagerModule = NativeModules.BleManager;
   const BleManagerEmitter = new NativeEventEmitter(BleManagerModule);
 
@@ -128,6 +106,7 @@ export const MyContextProvider: React.FC<{children: ReactNode}> = ({
     BleManager.start({showAlert: false}).then(() => {
       // Success code
       console.log('BLEManager initialized');
+     
     });
   },[]);
   useEffect(() => {
@@ -182,7 +161,6 @@ export const MyContextProvider: React.FC<{children: ReactNode}> = ({
     };
   }, [bluetoothDevices]);
 
-  
 
   const requestPermission = async () => {
     const granted = await PermissionsAndroid.requestMultiple([
@@ -191,6 +169,7 @@ export const MyContextProvider: React.FC<{children: ReactNode}> = ({
       PermissionsAndroid.PERMISSIONS.BLUETOOTH_ADVERTISE,
       PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
       PermissionsAndroid.PERMISSIONS.ACCESS_COARSE_LOCATION,
+
     ]);
     if (granted) {
       startScanning();
@@ -224,7 +203,7 @@ export const MyContextProvider: React.FC<{children: ReactNode}> = ({
     }
     if(service=== serviceid1 && characteristic===caracid2){
     const caracid2Value = bytesToString(value);
-    const PreviousFile = caracid2Value.substring(3);
+    const PreviousFile = caracid2Value.substring(1);
     console.log('caracid2:', PreviousFile);
     setPrevFile(PreviousFile);
     }
@@ -264,6 +243,21 @@ export const MyContextProvider: React.FC<{children: ReactNode}> = ({
             if(service=== serviceid2 && characteristic===caracid8){
               const caracid8Value = bytesToString(value);
               console.log('caracid8:', caracid8Value);
+              const dimensions = caracid8Value.trim().split('.');
+              // console.log("Split dimensions:", dimensions);
+        if (dimensions.length === 3) {
+            setCardCount(parseInt(dimensions[0], 10)); // card count
+            setCnCount(parseInt(dimensions[1], 10));   // connector count
+            setTtlHook(parseInt(dimensions[2], 10));  // total Hook 
+        } else {
+            console.error("Invalid format: expected 'height.width'");
+        }
+//         console.log("Card Count:", dimensions[0].trim());
+// console.log("Connector Count:", dimensions[1].trim());
+// console.log("Total Hook:", dimensions[2].trim());
+      console.log('caracid8 card:', cardCount);
+      console.log('caracid8: connector:', cnCount);
+      console.log('caracid8: Total Hooks:', ttlHook);
               }
   }
 
@@ -324,12 +318,17 @@ export const MyContextProvider: React.FC<{children: ReactNode}> = ({
     try {
       await BleManager.connect(item.id);
       setCurrentDevice(item);
+      setDeviceId(item.id);
       setIsConnected(true);
       const result = await BleManager.retrieveServices(item.id);
+      console.log('DeviceId is:..', item.id);
+      // console.log('Connected to DeviceId is:..', deviceid);
+      await discoverServices(item.id);
+      console.log('Successfully retrieved services for', item.id);
       console.log('result of services ', result);
-      discoverServices(deviceid);
-      console.log('onconnect method',isConnected);
-      console.log('onconnect method',isScanning);
+      // discoverServices(deviceid);
+      // console.log('onconnect method',isConnected);
+      // console.log('onconnect method',isScanning);
     } catch (error) {
       console.log('onConnect Error..:', error);
     }
@@ -383,6 +382,13 @@ const stringToBytes = (str) => {
         const services = peripheralInfo.services;
         const characteristics = peripheralInfo.characteristics;
 
+        // const newServiceUUIDs = services.map(service => service.uuid);
+        // const newCharacteristicUUIDs = characteristics.map(characteristic => characteristic.uuid);
+  
+        // // Update state with new UUIDs
+        // setServiceUUIDs(newServiceUUIDs);
+        // setCharacteristicUUIDs(newCharacteristicUUIDs);
+
         services.forEach((service) => {
             const serviceUUID = service.uuid;
             onChangeCharacteristics(serviceUUID, characteristics, deviceId);
@@ -421,7 +427,7 @@ const onChangeCharacteristics = (serviceUUID, result, deviceId) => {
 
 const ReadHeightwidth = async Dimensions => {
   if(isConnected){
-    BleManager.read(deviceid, serviceid1, caracid3)
+    BleManager.read(deviceId, serviceid1, caracid3)
     .then(heightwidth => {
       const strdata = bytesToString(heightwidth);
       if(strdata.includes('locked')){
@@ -443,7 +449,7 @@ const writeHeightToChange = async (picNum) => {
     const picCount = rootDir + myCount;
     console.log("converted pcount value",picCount);
     const testRun = stringToBytes(picCount);
-    await BleManager.write(deviceid, serviceid1, caracid2, testRun)
+    await BleManager.write(deviceId, serviceid1, caracid2, testRun)
       .then(() => {
         const results = bytesToString(testRun);
         console.log('Function call command sent PicCount', results);
@@ -453,47 +459,12 @@ const writeHeightToChange = async (picNum) => {
       });
   }
 };
-// const writeFileToSelect = async (filename) => {
-//   if (!isConnected) {
-//     console.log('Device is not connected.');
-//     return;
-//   }
-//   const filenameWithoutExtension = removeExtension(filename);
-//   console.log(filenameWithoutExtension); 
-//   const rootDir = '/';
-//   const fname = filename;
-//   const fullName = rootDir + fname;
-//   console.log('Full filename with path', fullName);
-//   const testRun = stringToBytes(filenameWithoutExtension);
-  
-//   console.log('Attempting to write data to:', deviceid);
-//   console.log('Service ID:', serviceid1);
-//   console.log('Characteristic ID:', caracid2);
-//   console.log('Data to send:', testRun);
 
-//   try {
-//     await BleManager.writeWithoutResponse(deviceid, serviceid1, caracid2, testRun);
-//     const results = bytesToString(testRun);
-//     console.log('Function call command sent File', results);
-//   } catch (error) {
-//     console.error('Error sending function call command:', error);
-//   }
-// };
-// const removeExtension = (filename) => {
-//   // Use lastIndexOf to find the position of the last dot
-//   const lastDotIndex = filename.lastIndexOf('.');
-  
-//   // If there's no dot, return the original filename
-//   if (lastDotIndex === -1) return filename;
-
-//   // Return the substring before the last dot
-//   return filename.substring(0, lastDotIndex);
-// };
 const writeData = async (name) => {
   if (isConnected) {
     // const str = "CALL_FUNCTION";
     const testRun = stringToBytes(name);
-    await BleManager.write(deviceid, serviceid2, caracid7, testRun)
+    await BleManager.write(deviceId, serviceid2, caracid7, testRun)
     .then(() => {
       const results = bytesToString(testRun);
       console.log('Function call command sent',results);
@@ -510,7 +481,54 @@ const writeFileToSelect = async (filename) => {
     const fullName = rootDir + fname;
     console.log('Fullfilename with path', fullName);
     const testRun = stringToBytes(fullName);
-    await BleManager.write(deviceid, serviceid1, caracid2, testRun)
+    await BleManager.write(deviceId, serviceid1, caracid2, testRun)
+      .then(() => {
+        const results = bytesToString(testRun);
+        console.log('Function call command sent File', results);
+      })
+      .catch(error => {
+        console.error('Error sending function call command:', error);
+      });
+  }
+};
+const deleteFile = async (filename) => {
+  if (isConnected) {
+    const rootDir = 'DL/';
+    const fname = filename;
+    const fullName = rootDir + fname;
+    console.log('Fullfilename with path', fullName);
+    const testRun = stringToBytes(fullName);
+    await BleManager.write(deviceId, serviceid1, caracid2, testRun)
+      .then(() => {
+        const results = bytesToString(testRun);
+        console.log('Function call command sent File', results);
+      })
+      .catch(error => {
+        console.error('Error sending function call command:', error);
+      });
+  }
+};
+const writeClcnCount = async (countvalue) => {
+  if (isConnected) {
+    const testRun = stringToBytes(countvalue);
+    await BleManager.write(deviceId, serviceid1, caracid2, testRun)
+      .then(() => {
+        const results = bytesToString(testRun);
+        console.log('Function call command sent File', results);
+      })
+      .catch(error => {
+        console.error('Error sending function call command:', error);
+      });
+  }
+};
+const leftRightSelect = async (lrval) => {
+  if (isConnected) {
+    const rootDir = 'LR/';
+    const lrvalue = lrval;
+    const full_lrval = rootDir + lrvalue;
+    console.log('Fullfilename with path', full_lrval);
+    const testRun = stringToBytes(full_lrval);
+    await BleManager.write(deviceId, serviceid1, caracid2, testRun)
       .then(() => {
         const results = bytesToString(testRun);
         console.log('Function call command sent File', results);
@@ -524,7 +542,7 @@ const unLockMachine = async () => {
   if (isConnected) {
     // const str = "CALL_FUNCTION";
     const unlockme = stringToBytes("MU/1");
-    await BleManager.write(deviceid, serviceid1, caracid2, unlockme)
+    await BleManager.write(deviceId, serviceid1, caracid2, unlockme)
     .then(() => {
       const results = bytesToString(unlockme);
       console.log('Function call command sent',results);
@@ -587,7 +605,18 @@ const unLockMachine = async () => {
         width,
         setWidth,
         imageData,
-        unLockMachine
+        unLockMachine,
+        cnCount,
+    setCnCount,
+    cardCount,
+    setCardCount,
+    ttlHook,
+    setTtlHook,
+    writeClcnCount,
+    deleteFile,
+    designDir,
+    setDesignDir,
+    leftRightSelect,
       }}>
       {children}
     </MyContext.Provider>

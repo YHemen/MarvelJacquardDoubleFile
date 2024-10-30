@@ -4,13 +4,16 @@
 #include <BLEUtils.h>
 #include <BLE2902.h>
 #include <string.h>
+#include <WiFi.h>
+#include <AsyncTCP.h>
+#include <ESPAsyncWebServer.h>
 #include "FS.h"
 #include "SD.h"
 #include "SPI.h"
 #include "SD_MMC.h"
 #include "uRTCLib.h"
 #include<EEPROM.h>
-#include <iostream>
+
 
 #define EN_Pin 35//20
 #define clk_Pin 8//21
@@ -51,6 +54,14 @@ const long interval = 300; // interval at which to check if the task is complete
 #define MOSI  12
 #define CS  13
 
+#define ssid "YTANISHKAA"
+#define password "PASSWORD"
+
+IPAddress local_IP(192, 168, 4, 1);
+IPAddress gateway(192, 168, 4, 1);
+IPAddress subnet(255, 255, 255, 0);
+AsyncWebServer server(80);
+
 #define bit_length  16
 #define PinAnalogIn 36
 
@@ -90,12 +101,13 @@ String previousValue2 = "";
 String temp_str=".";
 String combinedString="";
 String combinedString88="";
+String total_hook="";
 String result2;
 String result222;
 String lockstatus="locked";
 String unlockstatus="unlocked";
 std::string receivedData3 ;
-std::string selectedFile; 
+std::string selectedFile=""; 
 char  comp_string1[]="allu";
 char  comp_string2[]="alld";
 char  comp_string3[]="8up8d";
@@ -129,6 +141,7 @@ static int card_count=0;
 static int connector_count=1;
 static int max_cardcount=16;
 static int max_connector=16;
+static int16_t ttl_hks=0;
 static int width = 0;
 static int height= 0;
 static int height_var=0;
@@ -166,8 +179,8 @@ int mode_zero_flag=0;
 static int bmp_count=0;
 static int left_right_flag=1;
 static int lock_date=0;
-static int    lock_month=0;
-static int  lock_year=0;
+static int lock_month=0;
+static int lock_year=0;
 static int first_set_flag=0;
 
 unsigned int rpm1, rpm2, rpm3;
@@ -418,93 +431,31 @@ public:
     }
 
     // This function will send a notification with the combined string
-    void notifyWidthHeightCharacteristic(const String &combinedString) {
-        pCharacteristic3->setValue(combinedString.c_str()); // Set value as a C-string
-        pCharacteristic3->notify();
-        Serial.print("Notification sent: ");
-        Serial.println(combinedString.c_str());
-    }
+    // void notifyWidthHeightCharacteristic() {
+    //     String combinedString = heightWidth(); // Call the function to get dimensions
+    //     pCharacteristic3->setValue(combinedString.c_str()); // Set value as a C-string 
+    //     pCharacteristic3->notify();
+    //     Serial.print("Notification sent: ");
+    //     Serial.println(combinedString.c_str()); 
+    // }
+    // void setCharacteristic(BLECharacteristic *characteristic) {
+    //     pCharacteristic3 = characteristic;
+    // }
+     // This function will send a notification with the combined string
+    // void notifyCardCnCharacteristic(const String &total_hook) {
+    //     pCharacteristic22->setValue(total_hook.c_str()); // Set value as a C-string
+    //     pCharacteristic22->notify();
+    //     Serial.print("Notification sent: ");
+    //     Serial.println(total_hook.c_str());
+    // }
 
     // Set the characteristic to use for notifications
-    void setCharacteristic(BLECharacteristic *characteristic) {
-        pCharacteristic3 = characteristic;
-    }
+    // void setCardCnCharacteristic(BLECharacteristic *characteristic) {
+    //     pCharacteristic22 = characteristic;
+    // }
 };
-
 MyNotifyCharacteristic notifyCallbacks;
-// class writeHeightCallbacks : public BLECharacteristicCallbacks {
-// public:
-//     void onWrite(BLECharacteristic *pCharacteristic) override {
-//         std::string height_var = pCharacteristic2->getValue();
-//         Serial.print("Received write: ");
-//         Serial.println(height_var.c_str());
-//         writeHeightToEEPROM(height_var);
-//     }
-// };
-    class WriteFileCallbacks : public BLECharacteristicCallbacks {
-    void onWrite(BLECharacteristic *pCharacteristic) override {
-        std::string filename = pCharacteristic4->getValue();
-        Serial.print("Received write: ");
-        Serial.println(filename.c_str());
-        writeStringToEEPROM(filename);
-        readBMPDimensions(filename.c_str());
-        readBMPDimensions2(filename.c_str());
-        
-        // EEPROM.write(filename); // Write the data to EEPROM
-        // EEPROM.commit();
-        // Serial.print("filename written to EEPROM: ");
-        //     Serial.println(filename);
-        //  int length = strlen(filename);
-  
-        //       for (int i = 0; i < length; i++) 
-        //       {
-        //           EEPROM.write(i, filename[i]); // Write each character of the string to EEPROM
-        //       }
-        //     EEPROM.write(length, '\0'); // Null-terminate the string in EEPROM
-        //     EEPROM.commit(); // Commit the data to EEPROM
-       
 
-    }
-
-    void onRead(BLECharacteristic *pCharacteristic) override {
-        // Optional: handle read requests
-        
-    }
-
-};
-
-void writeStringToEEPROM(const std::string &filename) {
-    int length = filename.length(); // Get the length of the string
-    
-    // Ensure we do not exceed the EEPROM size
-    if (length + 1 > EEPROM.length()) {
-        Serial.println("String is too long to fit in EEPROM");
-        return;
-    }
-
-    for (int i = 0; i < length; i++) {
-        EEPROM.write(i, filename[i]); // Write each character of the string to EEPROM
-    }
-    EEPROM.write(length, '\0'); // Null-terminate the string in EEPROM
-    EEPROM.commit(); // Commit the data to EEPROM
-    height_var=0;
-    EEPROM.write(21,height_var);
-    EEPROM.commit();
-}
-void writeHeightToEEPROM(const std::string &height_var) {
-    // Convert string to integer
-    int height = std::stoi(height_var);
-
-    // Check if height is within the range of uint8_t
-    if (height < 0 || height > 255) {
-        Serial.println("Height value out of range (0-255).");
-        return;
-    }
-
-    // Write the height as a byte to EEPROM
-    EEPROM.write(21, static_cast<uint8_t>(height));
-    EEPROM.commit(); // Commit the changes to EEPROM
-}
 void listDir(fs::FS &fs, const char * dirname, uint8_t levels)
 {
   Serial.printf("Listing directory: %s\n", dirname);
@@ -594,6 +545,8 @@ void readBMPDimensions2(const char* filename)
     Serial.print("Height: ");
     Serial.println(height);
     // Check if it's a 1-bit BMP file
+    
+
   }
   file.close();
 }
@@ -625,16 +578,16 @@ void readBMPDimensions(const char* filename)
     Serial.print("Height: ");
     Serial.println(height);
     // trial & error
-           
-         temp_str=".";
+          if (pCharacteristic3) {
+           temp_str=".";
           combinedString = width +temp_str+height;
-          // notifyWidthHeightCharacteristic(combinedString);
-          notifyCallbacks.notifyWidthHeightCharacteristic(combinedString);
           pCharacteristic3->setValue((uint8_t*)&combinedString, sizeof(combinedString));
-          pCharacteristic3->notify();
-          pCharacteristic2->setValue(selectedFile.c_str());
-          pCharacteristic2->notify();
-          Serial.println(selectedFile.c_str());
+        pCharacteristic3->notify();
+        delay(10);
+    } else {
+        Serial.println("pCharacteristic3 is not initialized!");
+    }
+          
     // Check if it's a 1-bit BMP file
     if(read16() != 1) 
     {
@@ -3181,6 +3134,7 @@ class MyServerCallbacks: public BLEServerCallbacks
       
       temp_count=0;
       temp_count2=0;
+
     };
 
 
@@ -3282,6 +3236,7 @@ void separateString(String input)
      // Serial.println(max_cardcount);
      // Serial.print("Maximum Connector count=");
      // Serial.println(max_connector);
+
   }
 
 
@@ -3339,6 +3294,11 @@ void separateString2(String input)
       sensor_sel1=0;
       temp_sens_check=0;
       mem_cpy_set=1;
+      // ttl_hks=max_cardcount*max_connector*8;
+      // total_hook = String(ttl_hks);
+      // notifyCallbacks.notifyCardCnCharacteristic(total_hook);
+      // pCharacteristic22->setValue((uint8_t*)&total_hook, sizeof(total_hook));
+      // pCharacteristic22->notify();
       //Data_passing_clear();
       cleardata();
       //Data_passing_clear();
@@ -3691,6 +3651,69 @@ void setup()
   }
   uint64_t cardSize = SD.cardSize() / (1024 * 1024);
   Serial.printf("SD Card Size: %lluMB\n", cardSize);
+  // Setup WiFi access point
+ WiFi.softAP(ssid, password);
+  WiFi.softAPConfig(local_IP, gateway, subnet);
+  delay(1000);
+    // server.begin();
+  Serial.println("HTTP Server Started");
+  Serial.println("Connected to WiFi");
+  IPAddress IP = WiFi.softAPIP();
+  Serial.println(IP);
+
+  // Serve a simple HTML form for file upload
+  server.on("/", HTTP_GET, [](AsyncWebServerRequest *request){
+    String html = "<html><body><form action='/upload' method='POST' enctype='multipart/form-data'>";
+    html += "<input type='file' name='file'/>";
+    html += "<input type='submit' value='Upload'/>";
+    html += "</form></body></html>";
+    request->send(200, "text/html", html);
+  });
+  // Serve files from the SD card
+  server.on("/list-files", HTTP_GET, [](AsyncWebServerRequest *request){
+    String response = listFiles("/");
+    request->send(200, "text/plain", response);
+  });
+  // Handle file upload
+server.on("/upload", HTTP_POST, [](AsyncWebServerRequest *request) {
+    request->send(200, "text/plain", "File Uploaded Successfully");
+  }, [](AsyncWebServerRequest *request, String filename, size_t index, uint8_t *data, size_t len, bool final) {
+    static File uploadFile;
+    if (!index) {
+      String path = "/" + filename;
+      uploadFile = SD.open(path, FILE_WRITE);
+      if (!uploadFile) {
+        Serial.println("Failed to open file for writing");
+        return;
+      }
+      Serial.printf("Upload Start: %s\n", filename.c_str());
+    }
+    if (uploadFile) {
+      uploadFile.write(data, len);
+    }
+    if (final) {
+      uploadFile.close();
+      Serial.printf("Upload End Succesfully : %s (%u)\n", filename.c_str(), index + len);
+    }
+  });
+
+// Handle file retrieval
+server.on("/get-file", HTTP_GET, [](AsyncWebServerRequest *request){
+  if (request->hasParam("name")) {
+    String fileName = request->getParam("name")->value();
+    File file = SD.open("/" + fileName);
+    if (file) {
+      request->send(SD, "/" + fileName, "image/bmp"); // Change to correct MIME type
+      file.close();
+    } else {
+      request->send(404, "text/plain", "File not found");
+    }
+  } else {
+    request->send(400, "text/plain", "Missing file name parameter");
+  }
+});
+
+  server.begin();
   listDir(SD, "/", 0);
   // Create the BLE Device
   BLEDevice::init("Marvel CPU Board1");
@@ -3719,9 +3742,8 @@ void setup()
                       //BLECharacteristic::PROPERTY_INDICATE
                     );
   pCharacteristic2->addDescriptor(new BLE2902());
- pCharacteristic2->setCallbacks(new MyNotifyCharacteristic());
-//  pCharacteristic2->setCallbacks(new writeHeightCallbacks());
- 
+
+  
   pCharacteristic3 = pService->createCharacteristic(
                       CHARACTERISTIC_UUID3,
                       BLECharacteristic::PROPERTY_READ   |
@@ -3731,7 +3753,7 @@ void setup()
                     );
   pCharacteristic3->addDescriptor(new BLE2902());
 pCharacteristic3->setCallbacks(new MyNotifyCharacteristic());
-notifyCallbacks.setCharacteristic(pCharacteristic3);
+
   pCharacteristic4 = pService->createCharacteristic(
                       CHARACTERISTIC_UUID4,
                       BLECharacteristic::PROPERTY_READ   |
@@ -3741,7 +3763,7 @@ notifyCallbacks.setCharacteristic(pCharacteristic3);
                     );
   pCharacteristic4->addDescriptor(new BLE2902());
 pCharacteristic4->setCallbacks(new MyNotifyCharacteristic());
-pCharacteristic4->setCallbacks(new WriteFileCallbacks());
+// pCharacteristic4->setCallbacks(new WriteFileCallbacks());
   pCharacteristic5 = pService2->createCharacteristic(
                       CHARACTERISTIC_UUID5,
                       BLECharacteristic::PROPERTY_READ   |
@@ -3781,6 +3803,8 @@ pCharacteristic11->setCallbacks(new MyNotifyCharacteristic());
   // Create a BLE Descriptor
   pCharacteristic22->addDescriptor(new BLE2902());
 pCharacteristic22->setCallbacks(new MyNotifyCharacteristic());
+// notifyCallbacks.setCardCnCharacteristic(pCharacteristic22);
+
   // Start the service
   pService->start();
   pService2->start();
@@ -3810,8 +3834,8 @@ pCharacteristic22->setCallbacks(new MyNotifyCharacteristic());
     //sddata.data15=readData;
   // memcpy(&string2, readData, sizeof(readData));
 
-  // result2=string1+readData+string3;  this is for control board i.e esp32 client
-  result2=readData;  // this is for mobile app
+  result2=string1+readData+string3;  //this is for control board i.e esp32 client
+  // result2=readData;  // this is for mobile app
   Serial.print("eeprom read value=");
   Serial.println(result2);
   max_cardcount= EEPROM.read(10); // Read the data from EEPROM
@@ -3850,7 +3874,24 @@ pCharacteristic22->setCallbacks(new MyNotifyCharacteristic());
   Serial.println(mode_set);
 
 }
-
+String listFiles(String directory) {
+  String fileList = "\n";
+  File root = SD.open(directory);
+  if (!root) {
+    return "Failed to open directory";
+  }
+  
+  File file = root.openNextFile();
+  while (file) {
+    if (file.isDirectory()) {
+      fileList += "[DIR] " + String(file.name()) + "\n";
+    } else {
+      fileList += String(file.name()) + " (" + String(file.size()) + " bytes)\n";
+    }
+    file = root.openNextFile();
+  }
+  return fileList;
+}
 void loop()
  {
    if(sensor1NotDetected == true|| sensor2NotDetected == true)
@@ -4015,20 +4056,48 @@ if(rtc_flag==60000)
           pCharacteristic4->setValue((uint8_t*)&result_pcount, sizeof(result_pcount));
           // pCharacteristic4->setValue((uint8_t*)&height_var, 4);
           pCharacteristic4->notify();
+       
+          pCharacteristic2->setValue(result2.c_str());
+          pCharacteristic2->notify();
+           Serial.print("Selected File for Design 3972: ");
+          Serial.println(result2.c_str());
+
+if (pCharacteristic3) {
+           temp_str=".";
+          combinedString = width +temp_str+height;
+          pCharacteristic3->setValue((uint8_t*)&combinedString, sizeof(combinedString));
+        pCharacteristic3->notify();
+        Serial.print("width and height File for Design 3980: ");
+          Serial.println(combinedString.c_str());
+        delay(10);
+    } else {
+        Serial.println("pCharacteristic3 is not initialized!");
+    }
+
+if (pCharacteristic22) {
+          temp_str=".";
+          ttl_hks=max_cardcount*max_connector*8;
+          // total_hook = String(ttl_hks);
+          total_hook = max_cardcount + temp_str + max_connector + temp_str + ttl_hks;
+          pCharacteristic22->setValue((uint8_t*)&total_hook, sizeof(total_hook));
+        pCharacteristic22->notify();
+        Serial.print("card and connector count for Design 3992: ");
+          Serial.println(total_hook.c_str());
+        delay(10);
+    } else {
+        Serial.println("pCharacteristic22 is not initialized!");
+    }
+
        }
 
           	//Serial.println("hello world");
 
           std::string receivedData  = pCharacteristic2->getValue();// Display reading data file selection 
          
-        selectedFile = (receivedData.find(".bmp") != -1) ? receivedData : selectedFile;
-
-         
-         
-         
-        //  WriteFileCallbacks();
-         // Serial.print("Received data: ");
-          //Serial.println(receivedData.c_str());
+        // selectedFile = (receivedData.find(".bmp") != std::string::npos) ? receivedData : selectedFile;
+         //  WriteFileCallbacks();
+        //  Serial.print("Selected File in Line: ");
+        //   Serial.println(receivedData.c_str());
          
         const char*full_filename =receivedData.c_str();
         char* filename_without_ext = extract_filename_without_extension(full_filename);
@@ -4183,9 +4252,6 @@ if(rtc_flag==60000)
             EEPROM.commit(); // Commit the data to EEPROM
 
           result2=string1+previousValue+string3;
-          //Serial.println("result22222222222222222222222222222222222222222222");
-          // Serial.println(result2);
-         //readBMPDimensions2(result2.c_str());
 
           if (SD.exists(result2.c_str()))
           {
@@ -4193,19 +4259,17 @@ if(rtc_flag==60000)
            sprintf( result_width, "%d", width); 
            sprintf( result_height, "%d", height); 
           char result_pcount[10]; 
+          if (pCharacteristic3) {
            temp_str=".";
           combinedString = result_width +temp_str+result_height;
-          // notifyWidthHeightCharacteristic(combinedString);
-          notifyCallbacks.notifyWidthHeightCharacteristic(combinedString);
           pCharacteristic3->setValue((uint8_t*)&combinedString, sizeof(combinedString));
-          pCharacteristic3->notify();
-          pCharacteristic2->setValue(selectedFile.c_str());
-          pCharacteristic2->notify();
+        pCharacteristic3->notify();
+        delay(10);
+    } else {
+        Serial.println("pCharacteristic3 is not initialized!");
+    }
           Serial.println("combinedString==========================="); 
           Serial.println(combinedString);
-
-           Serial.print("Selected File for Design: ");
-          Serial.println(selectedFile.c_str());
                     // height_var=0;
            sensor_sel=0;
            sensor_sel1=0;
@@ -4960,6 +5024,7 @@ else if(sensor2Detected &&sensor_sel1==1)//else if(digitalRead(sen2) == LOW&&sen
     prev=prev-(temp_flag*2);  // prev=prev-(4608*2); 
     Serial.println(prev);
     readBMPDimensions(result2.c_str());
+
         //Serial.print("mem_cpy_set14=");
     //Serial.println(mem_cpy_set);
     mem_cpy_set=1;

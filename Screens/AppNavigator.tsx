@@ -7,6 +7,8 @@ import SettingsScreen from './SettingsScreen';
 import SplashScreen from './SplashScreen';
 import DetailsScreen from './DetailsScreen';
 import ExitScreen from './ExitScreen';
+import ScreenLockDemo from './ScreenLockDemo';
+import { AppState } from 'react-native';
 import {NavigationContainer} from '@react-navigation/native';
 import {createNativeStackNavigator} from '@react-navigation/native-stack';
 import {createDrawerNavigator} from '@react-navigation/drawer';
@@ -69,6 +71,7 @@ const AppDrawer = () => (
     <Drawer.Screen name="Settings" component={SettingsScreen} options={{drawerIcon: ({ color, size }) => (<Icon name="wrench" color={color} size={size} />),}} />
     <Drawer.Screen name="Details" component={DetailsScreen} options={{drawerIcon: ({ color, size }) => (<Icon name="cogs" color={color} size={size} />),}} />
     <Drawer.Screen name="Exit" component={ExitScreen} options={{drawerIcon: ({ color, size }) => (<Icon name="sign-out" color={color} size={size} />),}} />
+    <Drawer.Screen name="ScreenLockDemo" component={ScreenLockDemo} options={{drawerIcon: ({ color, size }) => (<Icon name="sign-out" color={color} size={size} />),}} />
   </Drawer.Navigator>
 );
 
