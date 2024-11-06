@@ -11,35 +11,11 @@ import {useMyContext} from '../Components/MyContext';
 
 const TestRunScreen = () => {
   const {
-    sdFiles,
-    setSdFiles,
     currentDevice,
     isConnected,
     writeData,
-    readData,
-    strRpm,
-    setStrRpm,
-    strFiles,
-    sdFilesReadFromClient,
-    readLockStatus,
-    readSdFiles,
-    char1Data,
-    setChar1Data,
-    char2Data,
-    setChar2Data,
-    char3Data,
-    setChar3Data,
-    char4Data,
-    setChar4Data,
   } = useMyContext();
-  // const handleReadFiles = async btnval1 => {
-  //   // const btnval = this.btnval1;
-  //   if (currentDevice) {
-  //     await writeData(btnval1);
-  //     //         // setStrRpm(files);
-  //     // console.log(files)
-  //   }
-  // };
+  
   const [selectedButton, setSelectedButton] = useState(null); // Track which button is selected
  
   // Function to handle button press

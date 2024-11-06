@@ -1,47 +1,16 @@
-import React, { useState } from "react";
-import {SafeAreaView, setNumber,Button, View, Text,LayoutAnimation, StyleSheet, TextInput, TouchableOpacity, TextInputComponent} from 'react-native';
-import { useNavigation } from '@react-navigation/native';
-import Modal from "react-native-modal";
-import { SlideInDown } from "react-native-reanimated";
-import HomeScreen from "./HomeScreen";
+import React, { useState, useEffect } from "react";
+import {Modal, SafeAreaView, setNumber,Button, View, Text,LayoutAnimation, StyleSheet, TextInput, TouchableOpacity, ToastAndroid} from 'react-native';
 import Icon from 'react-native-vector-icons/FontAwesome';
-import FilesScreen from "./FilesScreen"
 import { useMyContext } from '../Components/MyContext';
-
+import { useFocusEffect } from '@react-navigation/native';
 const SettingsScreen:React.FC<{navigation: any}> = ({navigation}) => {
     // const HomeScreen: React.FC = ({ navigation }) => {
     const {
       unLockMachine,
-      rpmValue,
-      sdFiles,
-      setSdFiles,
       currentDevice,
       isConnected,
-      writeData,
-      readData,
-      strRpm,
-      setStrRpm,
-      strFiles,
-      sdFilesReadFromClient,
       readLockStatus,
-      readSdFiles,
-      char1Data,
-      setChar1Data,
-      char2Data,
-      setChar2Data,
-      char3Data,
-      setChar3Data,
-      char4Data,
-      setChar4Data,
       lockStatus,
-      readDims,
-      width,
-      setWidth,
-      height,
-      setHeight,
-      imageData,
-      writeFileToSelect,
-      ReadHeightwidth,
       cnCount,
       setCnCount,
       cardCount,
@@ -54,7 +23,6 @@ const SettingsScreen:React.FC<{navigation: any}> = ({navigation}) => {
     leftRightSelect,
     prevFile,
     } = useMyContext();
-    const { someValue, setSomeValue } = useMyContext();
     const onColor = 'green';
   const offColor = 'red';
   const [isOn, setIsOn] = useState();
@@ -62,9 +30,50 @@ const SettingsScreen:React.FC<{navigation: any}> = ({navigation}) => {
   const [isLockOn, setIsLockOn] = useState();
   const [isLockOff, setIsLockOff] = useState();
   const [runningDesign, setRunningDesign] = useState(false);
+  const [modalVisible, setModalVisible] = useState(false);
+  const [inputText, setInputText] = useState('');
+  const [errorMessage, setErrorMessage] = useState('');
   const initialValue = 8;
 const finalValue = 22;
 
+useEffect(() => {
+  // Show the overlay when the component mounts
+  setModalVisible(true);
+}, []);
+
+const correctPassword = 'mySecret'; // Define your authentication value here
+useFocusEffect(
+  React.useCallback(() => {
+    setModalVisible(true); // Show the modal whenever the screen is focused
+    setInputText('');
+  }, [])
+);
+const handleBackPress = () => {
+  if (modalVisible) {
+    setModalVisible(false); // Optional: Close the modal before navigating
+    setInputText('');
+    navigation.navigate('Home'); // Navigate to the Home screen
+    return true; // Prevent closing the modal
+  }
+  return false; // Allow closing if the modal is not visible
+};
+const handleSubmit = () => {
+  // Check if the input matches the correct password
+  if (inputText === correctPassword) {
+    setModalVisible(false); // Close the modal if the input is correct
+    setErrorMessage(''); // Clear any error message
+    setInputText(''); // Clear the input
+    ToastAndroid.show("login Successful!", ToastAndroid.SHORT);
+  } else {
+    setErrorMessage('Invalid password. Please try again.'); // Show error message
+    console.log('Invalid password. Please try again.'); // Show error message
+    // Alert.alert(
+    //   'Owner', // Title
+    //   'Invalid password. Please try again.', // Message
+    //   [{ text: 'OK', onPress: () => console.log('OK Pressed') }] // Button
+    // );
+  }
+};
 
 const handleIncrement = () => {
     // Find the next number in the sequence
@@ -151,7 +160,7 @@ const handleDecrement = () => {
   const [month, setMonth] = useState('');
   const [year, setYear] = useState('');
   const [formattedDate, setFormattedDate] = useState('');
-  const handleSubmit = () => {
+  const handleDateSubmit = () => {
     const date = new Date(`${year}-${month}-${day}`);
     
     if (!isNaN(date)) {
@@ -162,7 +171,7 @@ const handleDecrement = () => {
     }
   };
   const changeCustName =() =>{
-    Alert('Customer Name changed');
+    ToastAndroid.show("Customer Name changed!", ToastAndroid.SHORT);
   }
     return(
         <SafeAreaView style={styles.container}>
@@ -286,11 +295,10 @@ marginHorizontal: 10 }}>
           value={year}
           onChangeText={setYear}
         />
-        <TouchableOpacity onPress={handleSubmit} style={{backgroundColor:'purple', width: 80, height: 40, borderRadius:5,justifyContent:'space-around', alignItems:'center', marginRight: 1, marginLeft: 20}} >
+        <TouchableOpacity onPress={handleDateSubmit} style={{backgroundColor:'purple', width: 80, height: 40, borderRadius:5,justifyContent:'space-around', alignItems:'center', marginRight: 1, marginLeft: 20}} >
         {/* <Icon name="chevron-up" size={30} color="#812892" />  */}
         <Text style={{color:'white'}}>Submit</Text>
         </TouchableOpacity>
-        {/* <Button title="Submit" onPress={handleSubmit} /> */}
       </View>
       
     </View>
@@ -303,15 +311,34 @@ marginHorizontal: 10 }}>
      
     </View>
     <View>
-    {/* <TouchableOpacity onPress={handleIncrement} style={{backgroundColor:'purple', width: 80, height: 40, borderRadius:5,justifyContent:'space-around', alignItems:'center', marginRight: 10}}>
-        <Text style={{justifyContent:'center',alignItems:'center', color:'white', fontSize:15}}>UN-LOCK</Text>
-        </TouchableOpacity> */}
         <TouchableOpacity style={{height: 40, width: 120, borderRadius: 25, borderWidth: 1,overflow: 'hidden',padding:1, borderColor: isLockOn?onColor:offColor}} onPress={()=>{LayoutAnimation.easeInEaseOut();setIsLockOn(!isLockOn);}}>
                 <View style={{borderRadius: 25,alignItem:'center',justifyContent: 'center',height: '100%', width: '50%', backgroundColor:isLockOn?onColor:offColor, alignSelf: isLockOn?'flex-end':'flex-start'}}>
                     <Text style={{alignItem:'center',justifyContent:'center',color:'white',fontSize:12, fontWeight:'800',fontStyle:'normal',marginLeft: 16}}>{isLockOn?<Icon name="lock" size={30} color="#ffffff" />:<Icon name="unlock" size={30} color="#ffffff" />}</Text>
                 </View>
                 </TouchableOpacity>
     </View> 
+    <Modal
+        transparent={true}
+        animationType="slide"
+        visible={modalVisible}
+        onRequestClose={handleBackPress}
+      >
+        <View style={styles.overlay}>
+          <View style={styles.modalContent}>
+            <TextInput
+              style={styles.textInput}
+              placeholder="Enter Password"
+              value={inputText}
+              onChangeText={setInputText}
+              secureTextEntry 
+            />
+            {errorMessage ? <Text style={styles.errorText}>{errorMessage}</Text> : null}
+            <TouchableOpacity style={styles.btn} onPress={handleSubmit}>
+              <Text style={styles.buttonText}>Submit</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
         </SafeAreaView>
     );
 }
@@ -383,4 +410,34 @@ const styles = StyleSheet.create({
         borderRadius: 10, // Set the border radius (optional)
         margin: 10, // Space between boxes
       }, 
+      overlay: {
+        flex: 1,
+        backgroundColor: 'rgba(0, 0, 0, 0.5)', // Transparent background
+        justifyContent: 'center',
+        alignItems: 'center',
+      },
+      modalContent: {
+        width: '80%',
+        backgroundColor: 'white',
+        padding: 20,
+        borderRadius: 10,
+        elevation: 5,
+      },
+      textInput: {
+        height: 40,
+        borderColor: 'gray',
+        borderWidth: 1,
+        marginBottom: 15,
+        paddingHorizontal: 10,
+      },
+      errorText:{
+        color: 'red',
+        fontWeight: 'bold',
+      },
+      btn: {
+        backgroundColor: '#812892',
+        padding: 8,
+        borderRadius: 5,
+        alignItems: 'center',
+      },
 })

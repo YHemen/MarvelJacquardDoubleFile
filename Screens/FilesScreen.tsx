@@ -6,19 +6,61 @@ import {
   Text,
   Alert,
   FlatList,
-  ScrollView,
   TouchableOpacity,
+  Modal,
+  TextInput,
+  ToastAndroid,
 } from 'react-native';
-import {useNavigation} from '@react-navigation/native';
 import DocumentPicker from 'react-native-document-picker';
 import Icon from 'react-native-vector-icons/FontAwesome';
 import {useMyContext} from '../Components/MyContext';
+import { useFocusEffect } from '@react-navigation/native';
 import axios from 'axios';
 Icon.loadFont();
+
 const FilesScreen: React.FC<{navigation: any}> = ({navigation}) => {
   const {
     deleteFile
   } = useMyContext();
+  const [modalVisible, setModalVisible] = useState(false);
+  const [inputText, setInputText] = useState('');
+  const [errorMessage, setErrorMessage] = useState('');
+  useEffect(() => {
+    // Show the overlay when the component mounts
+    setModalVisible(true);
+  }, []);
+
+  const correctPassword = 'mySecret'; // Define your authentication value here
+  useFocusEffect(
+    React.useCallback(() => {
+      setModalVisible(true); // Show the modal whenever the screen is focused
+    }, [])
+  );
+  const handleBackPress = () => {
+    if (modalVisible) {
+      setModalVisible(false); // Optional: Close the modal before navigating
+      navigation.navigate('Home'); // Navigate to the Home screen
+      return true; // Prevent closing the modal
+    }
+    return false; // Allow closing if the modal is not visible
+  };
+  const handleSubmit = () => {
+    // Check if the input matches the correct password
+    if (inputText === correctPassword) {
+      setModalVisible(false); // Close the modal if the input is correct
+      setErrorMessage(''); // Clear any error message
+      setInputText(''); // Clear the input
+      ToastAndroid.show("login Successful!", ToastAndroid.SHORT);
+    } else {
+      setErrorMessage('Invalid password. Please try again.'); // Show error message
+      console.log('Invalid password. Please try again.'); // Show error message
+      // Alert.alert(
+      //   'Owner', // Title
+      //   'Invalid password. Please try again.', // Message
+      //   [{ text: 'OK', onPress: () => console.log('OK Pressed') }] // Button
+      // );
+    }
+  };
   useEffect(() => {
     // Show the alert when the component mounts
     Alert.alert(
@@ -36,18 +78,7 @@ const FilesScreen: React.FC<{navigation: any}> = ({navigation}) => {
   const [files, setFiles] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const deleteBmpFile = async (selectedFile) =>{
-    Alert.alert('File Deletion', `You Want to Delete: ${selectedFile}`, [
-      {
-        text: 'Delete',
-        onPress: () => deleteFile(selectedFile),
-        style: 'delete',
-      },
-      {text: 'Cancel', onPress: () => console.log('Deletion Cancelled')},
-    ]);
-    console.log("File selected for deletion:",selectedFile);
-    
-  };
+
   const pickFile = async () => {
     try {
       const result = await DocumentPicker.pickSingle({
@@ -94,36 +125,11 @@ const FilesScreen: React.FC<{navigation: any}> = ({navigation}) => {
       });
       // console.log("beforeuploadmsg",setSelectedFile);
       console.log('File uploaded:', response.data);
+      ToastAndroid.show("File Uploaded Successfully!", ToastAndroid.SHORT);
     } catch (err) {
       console.error('Error uploading file:', err);
     }
   };
-
-  // const deleteFile = async filename => {
-  //   try {
-  //     // const response = await axios.post(`http://192.168.4.1/delete?filename=${encodedFilename}`);
-  //     const response = await axios.post(
-  //       `http://192.168.4.1/delete`,
-  //       new URLSearchParams({
-  //         filename: filename,
-  //       }),
-  //       {
-  //         headers: {
-  //           'Content-Type': 'application/x-www-form-urlencoded',
-  //         },
-  //       },
-  //     );
-  //     // Show success alert and refresh the file list
-  //     Alert.alert('Success', 'File deleted successfully');
-  //     fetchFiles(); // Refresh the file list
-  //   } catch (error) {
-  //     // Show error alert
-  //     Alert.alert(
-  //       'Error',
-  //       error.response ? error.response.data : 'Failed to delete file',
-  //     );
-  //   }
-  // };
   const fetchFiles = async () => {
     setLoading(true);
     try {
@@ -131,6 +137,7 @@ const FilesScreen: React.FC<{navigation: any}> = ({navigation}) => {
       const fileLines = response.data.split('\n').filter(line => line); // Splitting lines and filtering empty lines
       setFiles(fileLines);
       setError('');
+      // console.log(files);
     } catch (err) {
       setError('Error fetching data');
     } finally {
@@ -144,77 +151,31 @@ const FilesScreen: React.FC<{navigation: any}> = ({navigation}) => {
     Alert.alert('File Selected', `You selected: ${selectedFile}`, [
       {
         text: 'Delete',
-        onPress: () => deleteBmpFile(selectedFile),
+        onPress: () => deleteFile(selectedFile),
         style: 'cancel',
       },
       {text: 'Cancel', onPress: () => console.log('Deletion Cancelled')},
     ]);
   };
 
-  //   <View style={{ flex: 1, padding: 16 }}>
-  //   <FlatList
-  //     data={files}
-  //     keyExtractor={(item) => item.filename}
-  //     renderItem={({ item }) => (
-  //       <TouchableOpacity
-  //         onPress={() => deleteFile(item.filename)}
-  //         style={{ padding: 16, borderBottomWidth: 1 }}
-  //       >
-  //         <Text style={{ fontSize: 18 }}>{item.filename} - {item.size} bytes</Text>
-  //       </TouchableOpacity>
-  //     )}
-  //   />
-  // </View>
-
-  // const renderItem = ({ item }) => (
-  //   <View style={styles.itemContainer}>
-  //     <Text style={styles.fileName}>{item}</Text>
-
-  //     <TouchableOpacity
-  //       style={styles.deleteButton}
-  //       onPress={() =>handleSelect(item)}
-  //     >
-  //       <Text style={styles.buttonText}><Icon name="trash-o" size={20} color="#000" /></Text>
-  //     </TouchableOpacity>
-  //   </View>
-  // );
-
   return (
     <View style={styles.container}>
       {loading && <Text>Loading...</Text>}
       {error && <Text style={styles.error}>{error}</Text>}
-      {/* <FlatList
-            data={files}
-            renderItem={renderItem}
-            keyExtractor={(item) => item}
-          /> */}
       <FlatList
-        keyExtractor={item => item.id}
+        keyExtractor={(item, index) => item.id ? item.id.toString() : index.toString()}
         data={files}
         renderItem={({item}) => (
+          // console.log(item),
           <>
-            <TouchableOpacity onPress={() => handleSelect(item)} style={{ flexDirection: 'row', alignItems: 'center', padding:10 }}>
+            <TouchableOpacity key={item.id}  onPress={() => handleSelect(item)} style={{ flexDirection: 'row', alignItems: 'center', padding:10 }}>
               <Text style={{padding:2, fontSize:14,marginRight: 10,fontWeight: 'bold'}}>{item}</Text>
               <Text></Text><Icon name="trash-o" size={20} color="#FF0000" />
             </TouchableOpacity>
-            {/* <TouchableOpacity onPress={() => deleteFile(item)}>
-              <Icon name="trash-o" size={20} color="#FF0000" />
-            </TouchableOpacity> */}
           </>
         )}
       />
       <Button title="List Files" onPress={fetchFiles} />
-
-      {/* <ScrollView>
-            {loading ? (
-              <Text>Loading...</Text>
-            ) : error ? (
-              <Text>{error}</Text>
-            ) : (
-              <Text>{files}</Text>
-            )}
-            <Button title="List Files" onPress={fetchFiles} />
-          </ScrollView> */}
 
       <View
         style={{
@@ -227,6 +188,28 @@ const FilesScreen: React.FC<{navigation: any}> = ({navigation}) => {
         <Text> </Text>
         <Button title="Upload file" onPress={uploadFile} />
       </View>
+      <Modal
+        transparent={true}
+        animationType="slide"
+        visible={modalVisible}
+        onRequestClose={handleBackPress}
+      >
+        <View style={styles.overlay}>
+          <View style={styles.modalContent}>
+            <TextInput
+              style={styles.textInput}
+              placeholder="Enter Password"
+              value={inputText}
+              onChangeText={setInputText}
+              secureTextEntry 
+            />
+            {errorMessage ? <Text style={styles.errorText}>{errorMessage}</Text> : null}
+            <TouchableOpacity style={styles.btn} onPress={handleSubmit}>
+              <Text style={styles.buttonText}>Submit</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 };
@@ -263,5 +246,39 @@ const styles = StyleSheet.create({
   },
   deletefile: {
     width: 20,
+  },
+  overlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)', // Transparent background
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    width: '80%',
+    backgroundColor: 'white',
+    padding: 20,
+    borderRadius: 10,
+    elevation: 5,
+  },
+  textInput: {
+    height: 40,
+    borderColor: 'gray',
+    borderWidth: 1,
+    marginBottom: 15,
+    paddingHorizontal: 10,
+  },
+  errorText:{
+    color: 'red',
+    fontWeight: 'bold',
+  },
+  btn: {
+    backgroundColor: '#812892',
+        padding: 8,
+        borderRadius: 5,
+        alignItems: 'center',
+  },
+  buttonText: {
+    color: '#fff',
+    fontSize: 16,
   },
 });

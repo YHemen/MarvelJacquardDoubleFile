@@ -7,27 +7,22 @@ import React, {
   useEffect,
 } from 'react';
 import BleManager from 'react-native-ble-manager';
+
+
 // import { bytesToString,stringToBytes } from "convert-string";
 // import {bytesToString} from 'utils';
 // import { useNavigation } from '@react-navigation/native';
 import {Buffer} from 'buffer';
-import base64 from 'react-native-base64';
+// import base64 from 'react-native-base64';
 import {
-  
   View,
   Text,
-  Image,
-  setError,
-  TextInput,
-  Alert,
   StyleSheet,
   PermissionsAndroid,
   NativeEventEmitter,
   NativeModules,
-  FlatList,
   TouchableOpacity,
-  Button,
-  Dimensions,
+  ToastAndroid,
 } from 'react-native';
 
 // const BleManagerEmitter = new NativeEventEmitter(NativeModules.BleManager);
@@ -56,7 +51,7 @@ export const MyContextProvider: React.FC<{children: ReactNode}> = ({
   const [strRpm, setStrRpm] = useState(0);
   const [strFiles, setStrFiles] = useState();
   const [imageData, setImageData] = useState();
-
+  // const navigation = useNavigation();
  
   // let deviceid ="34:85:18:94:1D:D9";
   let serviceid1 ="4fafc201-1fb5-459e-8fcc-c5c9c331914b";
@@ -71,27 +66,14 @@ export const MyContextProvider: React.FC<{children: ReactNode}> = ({
   let caracid5 = "beb5483e-36e1-4689-b7f5-ea07361b26a8";
   const [isScanning, setIsScanning] = useState<boolean>(false);
   const [isConnected, setIsConnected] = useState<boolean>(false);
-  // const [selectedDevice, setSelectedDevice] = useState<Peripheral>();
   const [bleDevice, setDevice] = useState([]);
   const [bluetoothDevices, setBluetoothDevices] = useState([]);
-  // const [bleDevices, setDevices] = useState([]);
   const [currentDevice, setCurrentDevice] = useState<any>(null);
   const [deviceId, setDeviceId] = useState(null);
-  // const [devices, setDevices] = useState([]);
-  // const [serviceUUIDs, setServiceUUIDs] = useState([]); // State for service UUIDs
-  // const [characteristicUUIDs, setCharacteristicUUIDs] = useState([]); // State for characteristic UUIDs
-
   const [sdFiles, setSdFiles] = useState([]);
   const [prevFile,setPrevFile] = useState();
   const [rpmValue, setrpmValue] = useState();
   const [pCount, setPCount] = useState();
-  const [char1Data, setChar1Data] = useState('');
-  const [char2Data, setChar2Data] = useState('');
-  const [char3Data, setChar3Data] = useState('');
-  const [char4Data, setChar4Data] = useState('');
-  const [char5Data, setChar5Data] = useState('');
-  const [char7Data, setChar7Data] = useState('');
-  const [char8Data, setChar8Data] = useState('');
   const [data,setData] = useState();
   const [height, setHeight] = useState('');
   const [width, setWidth] = useState('');
@@ -99,6 +81,7 @@ export const MyContextProvider: React.FC<{children: ReactNode}> = ({
   const [cardCount, setCardCount] = useState(8);
   const [ttlHook,setTtlHook] = useState(0);
   const [designDir,setDesignDir] = useState('');
+  const [lockStatus,setLockStatus] = useState('');
   const BleManagerModule = NativeModules.BleManager;
   const BleManagerEmitter = new NativeEventEmitter(BleManagerModule);
 
@@ -143,8 +126,6 @@ export const MyContextProvider: React.FC<{children: ReactNode}> = ({
         console.log('Event BleManagerDidUpdateValueForCharacteristic', data);
         setData(data);
         readAllCharDataFromEvent(data);
-        // readCharacteristicFromEvent(data);
-        // readSdFiles(data);
       },
     );
     let BleManagerDidUpdateState = BleManagerEmitter.addListener(
@@ -255,9 +236,9 @@ export const MyContextProvider: React.FC<{children: ReactNode}> = ({
 //         console.log("Card Count:", dimensions[0].trim());
 // console.log("Connector Count:", dimensions[1].trim());
 // console.log("Total Hook:", dimensions[2].trim());
-      console.log('caracid8 card:', cardCount);
-      console.log('caracid8: connector:', cnCount);
-      console.log('caracid8: Total Hooks:', ttlHook);
+      // console.log('caracid8 card:', cardCount);
+      // console.log('caracid8: connector:', cnCount);
+      // console.log('caracid8: Total Hooks:', ttlHook);
               }
   }
 
@@ -293,14 +274,8 @@ export const MyContextProvider: React.FC<{children: ReactNode}> = ({
                   ? (isConnected ? onDisconnect(item) : onConnect(item))
                   : onConnect(item)
               }
-              // {
-              //   currentDevice?.id === item?.id
-              //     ? onDisconnect(item)
-              //     : onConnect(item);
-              // }
             }}>
             <Text style={styles.btntxt}>
-              {/* {currentDevice?.id === item?.id ? 'Disconnect' : 'Connect'} */}
               {currentDevice?.id === item?.id ? (isConnected ? 'Disconnect' : 'Connect') 
   : 'Connect'}
             </Text>
@@ -322,13 +297,10 @@ export const MyContextProvider: React.FC<{children: ReactNode}> = ({
       setIsConnected(true);
       const result = await BleManager.retrieveServices(item.id);
       console.log('DeviceId is:..', item.id);
-      // console.log('Connected to DeviceId is:..', deviceid);
       await discoverServices(item.id);
       console.log('Successfully retrieved services for', item.id);
       console.log('result of services ', result);
-      // discoverServices(deviceid);
-      // console.log('onconnect method',isConnected);
-      // console.log('onconnect method',isScanning);
+      //  navigation.navigate('Home');
     } catch (error) {
       console.log('onConnect Error..:', error);
     }
@@ -342,13 +314,25 @@ export const MyContextProvider: React.FC<{children: ReactNode}> = ({
         setIsConnected(false);
         clearInterval(item.id);
         console.log('Disconnected from device', item.id);
-        //  Alert.alert(`Disconnected from ${item.id}`);
+        // navigation.navigate('ScanningScreen');
       })
       .catch(error => {
         // Failure code
         console.log('Error disconnecting:', error);
       });
   };
+  // useEffect(() => {
+  //   // Example of listening to connection status
+  //   const handleConnectionChange = () => {
+  //     if (isConnected) {
+  //       navigation.navigate('Home');
+  //     } else {
+  //       navigation.navigate('ScanningScreen');
+  //     }
+  //   };
+
+  //   handleConnectionChange();
+  // }, [isConnected, navigation]);
 
   const bytesToString = (bytes: any) => {
     return String.fromCharCode(...bytes);
@@ -502,6 +486,7 @@ const deleteFile = async (filename) => {
       .then(() => {
         const results = bytesToString(testRun);
         console.log('Function call command sent File', results);
+        ToastAndroid.show("File Deleted Successfully!", ToastAndroid.SHORT);
       })
       .catch(error => {
         console.error('Error sending function call command:', error);
@@ -577,14 +562,10 @@ const unLockMachine = async () => {
         startScanning,
         onConnect,
         onDisconnect,
-        // readCharacteristicFromEvent,
         requestPermission,
         renderItem,
         handleGetConnectedDevices,
-        // onServiceDiscovered,
         onChangeCharacteristics,
-        // renderFileItems,
-        // readData,
         writeData,
         strRpm,
         setStrRpm,
@@ -592,14 +573,6 @@ const unLockMachine = async () => {
         strFiles,
         data,
         setData,
-        char1Data,
-        setChar1Data,
-        char2Data,
-        setChar2Data,
-        char3Data,
-        setChar3Data,
-        char4Data,
-        setChar4Data,
         height,
         setHeight,
         width,

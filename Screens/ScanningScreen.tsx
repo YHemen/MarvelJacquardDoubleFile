@@ -4,49 +4,11 @@ import { useMyContext } from '../Components/MyContext';
 
 
 const ScanningScreen =({navigation}) =>{
-    const { 
-        bluetoothDevices,
-      setBluetoothDevices,
+    const {
       bleDevice,
       isScanning, 
-      setIsScanning,
-      isConnected, 
-      setIsConnected,
-      currentDevice,
-      setCurrentDevice,
-      sdFiles,
-      setSdFiles,
-      startScanning,
-      onConnect,
-      onDisconnect,
-      readCharacteristicFromEvent,
-      requestPermission,
       renderItem,
-      handleGetConnectedDevices,
-      onServiceDiscovered,
-      onChangeCharacteristics,
-      readSdFiles,
-      readLockStatus,
-      renderFileItems,
         } = useMyContext();
-    // const {
-        
-    //     devices, 
-    //     isScanning, 
-    //     startScan, 
-    //     connectToDevice, 
-    //     connectedDevice, 
-    //     services, 
-    //     characteristics, 
-    //     readCharacteristic, 
-    //     writeCharacteristic, 
-    //     startNotification 
-    //   } = useContext(useMyContext);
-    
-    const handleConnect = (deviceId) => {
-        connectToDevice(deviceId);
-        navigation.navigate('Home'); // Navigate to the details screen after connecting
-      };
     return(
         <>
         <StatusBar backgroundColor= "#812892"/>
@@ -59,10 +21,7 @@ const ScanningScreen =({navigation}) =>{
                     keyExtractor={(item,index)=>index.toString()}
                     renderItem={renderItem}
                     />
-                    {/* <Text>Test</Text> */}
                     </View>}
-            {/* <Text style={styles.rippletxt}>WELCOME TO MARVEL JACQUARD...!</Text> */}
-            
         </View>
         </>
     );

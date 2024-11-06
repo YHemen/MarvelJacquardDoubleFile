@@ -1,79 +1,38 @@
-// screens/DetailsScreen.js
-
 import React, {useState,useEffect} from 'react';
 import {
   SafeAreaView,
   Image,
-  setNumber,
-  Button,
   View,
   Text,
-  LayoutAnimation,
   StyleSheet,
   TextInput,
   TouchableOpacity,
-  FlatList,
+  Modal ,
 } from 'react-native';
-import {useNavigation} from '@react-navigation/native';
 import {SelectList} from 'react-native-dropdown-select-list';
-import Modal from 'react-native-modal';
-import {SlideInDown} from 'react-native-reanimated';
-
 import Icon from 'react-native-vector-icons/FontAwesome';
-import FilesScreen from './FilesScreen';
 import {useMyContext} from '../Components/MyContext';
 import {ScrollView} from 'react-native-gesture-handler';
-
 const HomeScreen: React.FC = () => {
-  const onColor = 'green';
-  const offColor = 'red';
-  const [isOn, setIsOn] = useState();
-  const [isOff, setIsOff] = useState();
-  const [runningDesign, setRunningDesign] = useState(false);
+  const [isOverlayVisible, setOverlayVisible] = useState(false);
   const [fileName, setFileName] = useState(''); // State for file name input
   const [imageUri, setImageUri] = useState(null);
-  const navigation = useNavigation();
-  // const [number, setNumber] = useState(500);
+ 
   const {
-    data,
     sdFiles,
     rpmValue,
-    setSdFiles,
-    setRpmValue,
-    currentDevice,
-    isConnected,
-    writeData,
-    readData,
-    strRpm,
-    setStrRpm,
-    strFiles,
-    sdFilesReadFromClient,
-    readLockStatus,
-    readSdFiles,
-    char1Data,
-    setChar1Data,
-    char2Data,
-    setChar2Data,
-    char3Data,
-    setChar3Data,
-    char4Data,
-    setChar4Data,
     pCount,
     setPCount,
     writeFileToSelect,
     writeHeightToChange,
     height,
-    setHeight,
     width,
-    setWidth,
-    stringToBytes,
     prevFile,
     setPrevFile,
     cardCount,
     cnCount,
     ttlHook,
   } = useMyContext();
- 
   const submitPCount = () => {
     const pCountValue=String(pCount);
     writeHeightToChange(pCountValue);
@@ -81,45 +40,22 @@ const HomeScreen: React.FC = () => {
   const handleInputChange = (value) => {
     const numValue = value.replace(/[^0-9]/g,'');
     setPCount(numValue); // Update the state with the new input
-    // setPCount(value);
-    // writeHeightToChange(pCount);
+
   };
   const handleIncrement = () => {
     
     setPCount(prevHeight => {
       const incrementedHeight = prevHeight + 1;
-      // const cpCount = String.fromCharCode(incrementedHeight);
-      // console.log('converted after Increment String:', cpCount);
-      // console.log(pCount);
-      // Write the byte array back to ESP32
-      // writeHeightToChange(incrementedHeight);
-
       return incrementedHeight; // Return the new height for state update
       
     });
-      // setPCount(prevCount => prevCount + 1);
-      // writeHeightToChange(pCount);
-      // writeHeightToChange(pCount);
-    
   };
   const handleDecrement = () => {
-    // setInputValue((prev) => (parseInt(prev) + 1).toString()); // Increment value and convert to string
     setPCount(prevHeight => {
       const decrementdHeight = prevHeight - 1;
-      // const cpCount = String.fromCharCode(decrementdHeight);
-      // console.log('converted after Decrement String:', cpCount);
-      // console.log(pCount);
-
-      // writeHeightToChange(decrementdHeight);
-
       return decrementdHeight; // Return the new height for state update
     });
-    // writeHeightToChange(pCount);
   };
-  const [bodyFile, setBodyFile] = React.useState('');
-  const [borderFile, setBorderFile] = React.useState('');
-  const [selected, setSelected] = React.useState();
-  
 
   const handleSelect = value => {
     setPrevFile(value);
@@ -139,22 +75,11 @@ const HomeScreen: React.FC = () => {
     key: index + 1, // Unique key for each item starting from 1
     value: file,    // Display value for each item
   }));
-  //console.log(EdropdownData);
-  // Function to render each item
-  const renderItem = ({item}) => (
-    <View style={styles.itemContainer}>
-      <Text style={styles.itemText}>{item.name}</Text>
-    </View>
-  );
+
   useEffect(() => {
     // Fetch data for the initial prevFile when the component mounts
     getFile(prevFile);
 }, []); // Empty dependency array to run only on mount
-//   useEffect(() => {
-//     if (prevFile) {
-//         getFile(prevFile);
-//     }
-// }, [prevFile]);
   const getFile = async (fileName) => {
     console.log("file selected",fileName);
     if (!fileName) {
@@ -178,8 +103,13 @@ const HomeScreen: React.FC = () => {
       alert('Error fetching the file');
     }
   };
+  const toggleOverlay = () => {
+    setOverlayVisible(!isOverlayVisible);
+  };
+
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={styles.container}>
+        <SafeAreaView style={styles.container}>
       <View
         style={{
           height: 300,
@@ -189,7 +119,7 @@ const HomeScreen: React.FC = () => {
         }}>
         <View style={{alignSelf: 'center', alignItems: 'center'}}>
           <View>
-            <Text style={{fontSize: 20, fontWeight: 'bold'}}>BODY</Text>
+            <Text style={{fontSize: 20, fontWeight: 'bold', marginBottom: 20}}>BODY</Text>
           </View>
           {/* <View><Text style={{fontSize:16,fontStyle:'italic'}}>templates/alternate</Text></View> */}
         </View>
@@ -200,6 +130,7 @@ const HomeScreen: React.FC = () => {
             justifyContent: 'space-between',
             alignItems: 'center',
             paddingHorizontal: 14,
+            marginBottom: 5,
           }}> 
           {/* <Text> PCount:</Text> */}
           <TouchableOpacity onPress={handleDecrement}>
@@ -234,16 +165,14 @@ const HomeScreen: React.FC = () => {
         </TouchableOpacity>
         </View>
         <View>
-          <Text style={{textAlign: 'center', fontWeight: 'bold', fontSize: 18}}>
+          <Text style={{marginBottom:5, textAlign: 'center', fontWeight: 'bold', fontSize: 18}}>
           height: {width} / Width: {height}
           </Text>
           <View>
-            <Text style={{textAlign: 'center', fontWeight: 'bold', fontSize: 12}}>Cards: {cardCount} / CN: {cnCount} / Total Hooks: {ttlHook}</Text>
+            <Text style={{marginBottom: 5, textAlign: 'center', fontWeight: 'bold', fontSize: 12}}>Cards: {cardCount} / CN: {cnCount} / Total Hooks: {ttlHook}</Text>
             </View>
         </View>
         <View>
-          {/* <SelectList setSelected={(val) => setSelected(val)} data={datas} save="value" dropdownStyles={{height: 150}} />  */}
-          {/* <Text style={styles.selectedItem}>Selected Item: {selected}</Text> */}
           <SelectList
             setSelected={handleSelect}
             data={dropdownData}
@@ -257,16 +186,6 @@ const HomeScreen: React.FC = () => {
             placeholderStyle={styles.placeholder}
             selected={prevFile}
           />
-          {/* {currentDevice ? (
-                  <ActivityIndicator size="large" color="#0000ff" />
-                ) : ( */}
-          {/* <FlatList
-            data={sdFiles}
-            renderItem={renderItem}
-            keyExtractor={(item) => item.id}
-            ListEmptyComponent={<Text>No images available</Text>}
-            // ListHeaderComponent={<Text style={styles.header}>My List</Text>}
-          /> */}
           <ScrollView>
           {imageUri && (
         <Image
@@ -278,101 +197,42 @@ const HomeScreen: React.FC = () => {
           
         </ScrollView>
         </View>
-        {/* <ScrollView>
-          <Image
-            source={require('../assets/images/LOGO.png')}
-            style={{height: 306, width: 225}}
-          />
-          
-        </ScrollView> */}
-      </View>
-
-      {/* <View style={{height: 300, paddingTop: 20, paddingBottom: 30}}>
-         <View><Text style={{fontSize:20}}>Hook Settings</Text></View> 
-        <View style={{alignSelf: 'center', alignItems: 'center'}}>
-          <View>
-            <Text style={{fontSize: 20, fontWeight: 'bold'}}>BORDER-1</Text>
-          </View>
-        </View>
-
-        <View
-          style={{
-            flexDirection: 'row',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            paddingHorizontal: 30,
-          }}>
-          <TouchableOpacity onPress={handleDecrement}>
-            <Icon name="chevron-down" size={30} color="#000" />
-          </TouchableOpacity>
-          <TextInput
-            keyboardType="number-pad"
-            style={{
-              width: 50,
-              borderRadius: 5,
-              fontSize: 24,
-              fontWeight: 'bold',
-              color: 'steelblue',
-            }}>
-            {' '}
-            {pCount}
-          </TextInput>
-          <TouchableOpacity onPress={handleIncrement}>
-            <Icon name="chevron-up" size={30} color="#000" textAlign="right" />
-          </TouchableOpacity>
-        </View>
-        <View>
-          <Text style={{textAlign: 'center', fontWeight: 'bold', fontSize: 18}}>
-            Width: 1056 / height: 2816
-          </Text>
-        </View>
-        <View> */}
-          {/* <SelectList
-                setSelected={val => setSelected(val)}
-                data={datas}
-                save="value"
-                dropdownStyles={{height: 150}}
-              /> */}
-          {/* <Text style={styles.selectedItem}>Selected Item: {selected}</Text> */}
-          {/* <SelectList
+        {/* <View>
+          <SelectList
             setSelected={handleSelect}
             data={dropdownData}
             save="key"
-            placeholder="Select a file"
+            // value= {prevFile}
+            // placeholder={"Select a file"}
+            placeholder={prevFile ? prevFile : "Select File"}
             boxStyles={styles.selectBox}
             dropdownStyles={styles.dropdown}
             dropdownTextStyles={styles.dropdownText}
             placeholderStyle={styles.placeholder}
-          /> */}
-          {/* {currentDevice ? (
-        <ActivityIndicator size="large" color="#0000ff" />
-      ) : ( */}
-          {/* <FlatList
-            data={sdFiles}
-            renderItem={renderItem}
-            keyExtractor={item => item.id}
-            ListEmptyComponent={<Text>No images available</Text>}
-            // ListHeaderComponent={<Text style={styles.header}>My List</Text>}
+            selected={prevFile}
           />
-        </View>
-        <ScrollView>
-          <Image
-            source={require('../assets/images/border.bmp')}
-            style={{height: 126, width: 225}}
-          />
+          <ScrollView>
+          {imageUri && (
+        <Image
+          source={{ uri: imageUri }}
+          style={{backgroundColor:'pink', width:335, height:150}}
+          resizeMode="stretch"
+        />
+      )}
+          
         </ScrollView>
-      </View> */}
-
+        </View> */}
+      </View>
       <View
         style={{
           flexDirection: 'row',
           justifyContent: 'space-between',
           alignItems: 'center',
-          paddingHorizontal: 30,
-          paddingVertical: 25,
+          marginLeft: 60,
+          marginTop:310,
         }}>
         <View>
-          <Text style={{fontSize: 30, fontWeight: 'bold', color: 'purple'}}>
+          <Text style={{fontSize: 30, fontWeight: 'bold', color: 'purple', marginTop:10}}>
             {rpmValue}
           </Text>
         </View>
@@ -384,23 +244,34 @@ const HomeScreen: React.FC = () => {
             alignSelf: 'center',
             alignContent: 'center',
           }}></View>
-        {/* <TouchableOpacity onPress={()=>{navigation.navigate(FilesScreen)}}>
-              <Text style={{backgroundColor: 'pink', borderRadius: 50, width: 45, height: 45, paddingLeft: 8, paddingTop: 5}}><Icon name="upload" size={30} color="#000" /></Text>
-        </TouchableOpacity> */}
       </View>
     </SafeAreaView>
+      <TouchableOpacity style={styles.floatingButton} onPress={toggleOverlay}>
+        <Text style={styles.buttonText}>
+          {isOverlayVisible ? <Icon name="unlock" size={30} color="#FFFFFF" /> : <Icon name="lock" size={30} color="#FFFFFF" />}
+        </Text>
+      </TouchableOpacity>
+
+      {/* Overlay */}
+      {isOverlayVisible && (
+        <Modal transparent={true} animationType="fade">
+          <View style={styles.overlay}>
+            <Text style={styles.overlayText}>Un-Lock to Change Settings</Text>
+            <TouchableOpacity style={styles.closeButton} onPress={toggleOverlay}>
+              <Text style={styles.buttonText}><Icon name="unlock" size={30} color="#FFFFFF" /></Text>
+            </TouchableOpacity>
+          </View>
+        </Modal>
+      )}
+    </View>
   );
 };
-export default HomeScreen;
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#EFDBFE',
-    alignItems: 'center',
-
     // justifyContent: 'center',
-
-    // flex: 1, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 10,
+    alignItems: 'center',
   },
   btn: {
     width: 200,
@@ -417,4 +288,61 @@ const styles = StyleSheet.create({
   txt: {
     color: 'white',
   },
+  button: {
+    padding: 1,
+    backgroundColor: '#007BFF',
+    borderRadius: 5,
+    marginLeft:10,
+  },
+  buttonText: {
+
+    color: '#FFFFFF',
+    fontSize: 18,
+  },
+  overlay: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)', // Semi-transparent background
+    
+  },
+  overlayText: {
+    color: '#FFFFFF',
+    fontSize: 24,
+    marginBottom: 20,
+  },
+  closeButton: {
+    position: 'absolute',
+    top: 57, // Adjust for vertical spacing
+    left: 6, // Adjust for horizontal spacing
+    width: 40,
+    height: 40,
+    backgroundColor: '#812892',
+    borderRadius: 30, // Circular button
+    justifyContent: 'center',
+    alignItems: 'center',
+    elevation: 5, // Android shadow
+    shadowColor: '#000', // iOS shadow
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+  },
+  floatingButton: {
+    position: 'absolute',
+    top: 1, // Adjust for vertical spacing
+    left: 6, // Adjust for horizontal spacing
+    width: 40,
+    height: 40,
+    backgroundColor: '#812892',
+    borderRadius: 30, // Circular button
+    justifyContent: 'center',
+    alignItems: 'center',
+    elevation: 5, // Android shadow
+    shadowColor: '#000', // iOS shadow
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+  },
 });
+
+export default HomeScreen;
