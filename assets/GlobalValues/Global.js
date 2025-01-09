@@ -1,11 +1,19 @@
-const deviceid ='34:85:18:93:E8:A9';
-const serviceid ='4fafc201-1fb5-459e-8fcc-c5c9c331914b';
-const caracid = 'beb5483e-36e1-4685-b7f5-ea07361b26a8';
-const caracid1 = 'beb5483e-36e1-4686-b7f5-ea07361b26a8';
-const caracid2 = 'beb5483e-36e1-4687-b7f5-ea07361b26a8';
-const caracid3 = 'beb5483e-36e1-4688-b7f5-ea07361b26a8';
-const serviceid1 = '4fafc202-1fb5-459e-8fcc-c5c9c331914b';
-const caracid4 = 'beb5483e-36e2-4670-b7f5-ea07361b26a8';
-const caracid5 = 'beb5483e-36e2-4671-b7f5-ea07361b26a8';
-const caracid7 = 'beb5483e-36e2-4680-b7f5-ea07361b26a8'; 
-const caracid8 = 'beb5483e-36e1-4689-b7f5-ea07361b26a8';
+// styles.js
+import { StyleSheet } from 'react-native';
+
+const globalStyles = StyleSheet.create({
+   container: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+      backgroundColor: '#EFDBFE',
+     },
+  text: {
+    color: '#000000', // Set your default font color here
+    fontFamily: 'Roboto',
+    fontWeight: 'bold',
+    alignItems: 'center',
+  },
+});
+
+export default globalStyles;

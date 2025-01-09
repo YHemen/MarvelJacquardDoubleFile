@@ -1,4 +1,4 @@
-import React ,{useState} from 'react';
+import React ,{useState, useEffect} from 'react';
 import {
   View,
   Text,
@@ -8,16 +8,21 @@ import {
 } from 'react-native';
 import Icon from 'react-native-vector-icons/FontAwesome';
 import {useMyContext} from '../Components/MyContext';
-
+import { useTranslation } from 'react-i18next'; // Hook to access translation
+import '../services/i18n';
+import i18next from "i18next";
 const TestRunScreen = () => {
   const {
     currentDevice,
     isConnected,
     writeData,
   } = useMyContext();
-  
+  const { t, i18n } = useTranslation();
   const [selectedButton, setSelectedButton] = useState(null); // Track which button is selected
- 
+ useEffect(() => {
+       // Ensure re-render when language changes
+       console.log('Current language:', i18n.language);
+     }, [i18n.language]);
   // Function to handle button press
   const handlePress = async (btnval1) => {
     // const btnval = this.btnval1;
@@ -42,7 +47,7 @@ const TestRunScreen = () => {
       onPress={() => handlePress('allu')}
     >
       <Text style={styles.itemText}>
-        {selectedButton === 'allu' ? 'Deselect' : 'All Up'}
+        {selectedButton === 'allu' ? 'Deselect' : i18next.t('All Up')}
       </Text>
     </TouchableOpacity>
     
@@ -51,7 +56,7 @@ const TestRunScreen = () => {
       onPress={() => handlePress('alld')}
     >
       <Text style={styles.itemText}>
-        {selectedButton === 'alld' ? 'Deselect' : 'All Down'}
+        {selectedButton === 'alld' ? 'Deselect' : i18next.t('All Down')}
       </Text>
     </TouchableOpacity>
     
@@ -60,7 +65,7 @@ const TestRunScreen = () => {
       onPress={() => handlePress('8up8d')}
     >
       <Text style={styles.itemText}>
-        {selectedButton === '8up8d' ? 'Deselect' : '8 Up 8 Down'}
+        {selectedButton === '8up8d' ? 'Deselect' : i18next.t('8 Up 8 Down')}
       </Text>
     </TouchableOpacity>
 
@@ -69,7 +74,7 @@ const TestRunScreen = () => {
       onPress={() => handlePress('1up1d')}
     >
       <Text style={styles.itemText}>
-        {selectedButton === '1up1d' ? 'Deselect' : '1 Up 1 Down'}
+        {selectedButton === '1up1d' ? 'Deselect' : i18next.t('1 UP 1 Down')}
       </Text>
     </TouchableOpacity>
       </View>

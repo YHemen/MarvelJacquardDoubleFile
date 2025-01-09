@@ -1,4 +1,5 @@
-import React, {useState,useEffect} from 'react';
+import React, {useState,useEffect, useCallback} from 'react';
+
 import {
   SafeAreaView,
   Image,
@@ -8,16 +9,26 @@ import {
   TextInput,
   TouchableOpacity,
   Modal ,
+  Animated, 
+  Easing,
+  RefreshControl,
+  Alert,
 } from 'react-native';
 import {SelectList} from 'react-native-dropdown-select-list';
 import Icon from 'react-native-vector-icons/FontAwesome';
 import {useMyContext} from '../Components/MyContext';
 import {ScrollView} from 'react-native-gesture-handler';
+import { useTranslation } from 'react-i18next'; // Hook to access translation
+import '../services/i18n';
+import i18next from "i18next";
+
 const HomeScreen: React.FC = () => {
+  const { t, i18n } = useTranslation();
   const [isOverlayVisible, setOverlayVisible] = useState(false);
-  const [fileName, setFileName] = useState(''); // State for file name input
   const [imageUri, setImageUri] = useState(null);
- 
+  const [loading, setLoading] = useState(false); // To track the loading state
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [text, setText] = useState(false);
   const {
     sdFiles,
     rpmValue,
@@ -33,6 +44,25 @@ const HomeScreen: React.FC = () => {
     cnCount,
     ttlHook,
   } = useMyContext();
+
+useEffect(() => {
+    // Ensure re-render when language changes
+    console.log('Home Screen Current language:', i18n.language);
+  }, [i18n.language]);
+  // Function to handle the refresh
+  const onRefresh = useCallback(() => {
+    setIsRefreshing(true); // Start refreshing
+    console.log("Refreshing with file:", prevFile); // Log the file name being passed to getFile
+    getFile(prevFile); // Pass prevFile to getFile
+
+    // Simulating an API call or refresh operation
+    setTimeout(() => {
+        setIsRefreshing(false); // Stop refreshing after 2 seconds
+    }, 2000);
+}, [prevFile]); // Ensure it refreshes with the latest prevFile value
+
+
+
   const submitPCount = () => {
     const pCountValue=String(pCount);
     writeHeightToChange(pCountValue);
@@ -76,24 +106,49 @@ const HomeScreen: React.FC = () => {
     value: file,    // Display value for each item
   }));
 
+
+  const rotateValue = new Animated.Value(0); // Animated value to rotate the spinner
+
+  useEffect(() => {
+    // Create a continuous rotation animation
+    if (loading) {
+      Animated.loop(
+        Animated.timing(rotateValue, {
+          toValue: 1,
+          duration: 1000,
+          easing: Easing.linear,
+          useNativeDriver: true,
+        })
+      ).start();
+    }
+  }, [loading]);
+
+  const rotate = rotateValue.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['0deg', '360deg'],
+  });
+
   useEffect(() => {
     // Fetch data for the initial prevFile when the component mounts
     getFile(prevFile);
-}, []); // Empty dependency array to run only on mount
+  }, []); // Empty dependency array to run only on mount
+
   const getFile = async (fileName) => {
-    console.log("file selected",fileName);
+    console.log("file selected", fileName);
+
     if (!fileName) {
       alert('Please enter a file name with extension (e.g., butta.bmp)');
       return;
     }
 
+    setLoading(true); // Set loading to true when the request starts
+
     try {
       const response = await fetch(`http://192.168.4.1/get-file?name=${fileName}`);
       if (response.ok) {
-        
-        // Use the response URL directly without creating a blob URL
+        // Set the image URL if the file is found
         setImageUri(`http://192.168.4.1/get-file?name=${fileName}`);
-        console.log("url",imageUri);
+        console.log("url", imageUri);
       } else {
         alert('File not found');
         setImageUri(null); // Clear the image if not found
@@ -101,14 +156,45 @@ const HomeScreen: React.FC = () => {
     } catch (error) {
       console.error('Error fetching file:', error);
       alert('Error fetching the file');
+      setImageUri(null); // Clear the image in case of error
+    } finally {
+      setLoading(false); // Set loading to false when the request is complete (success or failure)
     }
   };
+
+  useEffect(() => {
+    if (imageUri) {
+      console.log("Updated Image URL:", imageUri);
+    }
+  }, [imageUri]);
+  
   const toggleOverlay = () => {
     setOverlayVisible(!isOverlayVisible);
   };
-
+  const handleLongPress = () => {
+    // Display the alert box on long press
+    Alert.prompt(
+      'Input Number',            // Title of the alert box
+      'Enter a number:',         // Message displayed in the alert box
+      [
+        {
+          text: 'Cancel',        // Cancel button
+          style: 'cancel',
+        },
+        {
+          text: 'OK',            // OK button
+          onPress: (inputText) => {
+            setPCount(inputText); // Store the input value in pCount state (updates the TextInput)
+          },
+        },
+      ],
+      'plain-text',              // Type of input (plain-text here)
+      pCount                     // Default value (current pCount value)
+    );
+  };
   return (
     <View style={styles.container}>
+    
         <SafeAreaView style={styles.container}>
       <View
         style={{
@@ -119,7 +205,7 @@ const HomeScreen: React.FC = () => {
         }}>
         <View style={{alignSelf: 'center', alignItems: 'center'}}>
           <View>
-            <Text style={{fontSize: 20, fontWeight: 'bold', marginBottom: 20}}>BODY</Text>
+            <Text style={{fontSize: 24, fontWeight: 'bold', marginBottom: 10,}}>{t('BODY')}</Text>
           </View>
           {/* <View><Text style={{fontSize:16,fontStyle:'italic'}}>templates/alternate</Text></View> */}
         </View>
@@ -129,20 +215,24 @@ const HomeScreen: React.FC = () => {
             flexDirection: 'row',
             justifyContent: 'space-between',
             alignItems: 'center',
-            paddingHorizontal: 14,
-            marginBottom: 5,
+            paddingHorizontal: 50,
+            marginBottom: 10,
           }}> 
           {/* <Text> PCount:</Text> */}
           <TouchableOpacity onPress={handleDecrement}>
             <Icon name="chevron-down" size={30} color="#812892" />
           </TouchableOpacity>
+          
+          <TouchableOpacity onLongPress={handleLongPress} activeOpacity={0.7}>
           <TextInput
             keyboardType="number-pad"
-            // value={pCount}
-            onChangeText={handleInputChange}
+            //  value={pCount}
+            // onChangeText={handleInputChange}
             placeholder='Input Number'
+            maxLength={6}
+            editable={false}
             style={{
-              width: 60,
+              width: 80,
               height:46,
               borderRadius: 5,
               fontSize: 24,
@@ -152,24 +242,28 @@ const HomeScreen: React.FC = () => {
               marginRight: 10,
               borderWidth:1,
               borderColor:'#812892',
-            }} >
+              textAlign: 'center', // Horizontally center text
+              textAlignVertical: 'center',
+            }}>
             {' '}
             {pCount}
           </TextInput>
+          </TouchableOpacity>  
+          
           <TouchableOpacity onPress={handleIncrement}>
             <Icon name="chevron-up" size={30} color="#812892" textAlign="right" />
           </TouchableOpacity>
           <TouchableOpacity  onPress={submitPCount}  style={{backgroundColor:'purple', width: 50, height: 40, borderRadius:5,justifyContent:'space-around', alignItems:'center', marginRight: 0, marginLeft: 22}} >
         {/* <Icon name="chevron-up" size={30} color="#000" />  */}
-        <Text style={{color:'white'}}>OK</Text>
+        <Text style={{color:'white'}}>{t('ok')}</Text>
         </TouchableOpacity>
         </View>
         <View>
-          <Text style={{marginBottom:5, textAlign: 'center', fontWeight: 'bold', fontSize: 18}}>
-          height: {width} / Width: {height}
+          <Text style={{marginBottom:10, textAlign: 'center', fontWeight: 'bold', fontSize: 20}}>
+          {t('Height')}: {width} / {t('Width')}: {height}
           </Text>
           <View>
-            <Text style={{marginBottom: 5, textAlign: 'center', fontWeight: 'bold', fontSize: 12}}>Cards: {cardCount} / CN: {cnCount} / Total Hooks: {ttlHook}</Text>
+            <Text style={{marginBottom: 10, textAlign: 'center', fontWeight: 'bold', fontSize: 14}}>{t('Cards')}: {cardCount} / {t('Connectors')}: {cnCount} / {t('Total Hooks')}: {ttlHook}</Text>
             </View>
         </View>
         <View>
@@ -177,51 +271,29 @@ const HomeScreen: React.FC = () => {
             setSelected={handleSelect}
             data={dropdownData}
             save="key"
-            // value= {prevFile}
-            // placeholder={"Select a file"}
-            placeholder={prevFile ? prevFile : "Select File"}
+            placeholder={prevFile ? prevFile : 'Select File'}
             boxStyles={styles.selectBox}
             dropdownStyles={styles.dropdown}
             dropdownTextStyles={styles.dropdownText}
             placeholderStyle={styles.placeholder}
             selected={prevFile}
           />
-          <ScrollView>
-          {imageUri && (
-        <Image
-          source={{ uri: imageUri }}
-          style={{backgroundColor:'pink', width:335, height:150}}
-          resizeMode="stretch"
-        />
+          <ScrollView refreshControl={
+        <RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} />
+      }
+    >
+      <View style={styles.container}>
+      {loading ? (
+        <Animated.View style={{ transform: [{ rotate }] }}>
+          <View style={styles.spinner}></View>
+        </Animated.View>
+      ) : (
+        imageUri && <Image source={{ uri: imageUri }} style={styles.image} resizeMode="stretch" />
       )}
-          
+      {loading && <Text>Loading...</Text>}
+    </View>
         </ScrollView>
         </View>
-        {/* <View>
-          <SelectList
-            setSelected={handleSelect}
-            data={dropdownData}
-            save="key"
-            // value= {prevFile}
-            // placeholder={"Select a file"}
-            placeholder={prevFile ? prevFile : "Select File"}
-            boxStyles={styles.selectBox}
-            dropdownStyles={styles.dropdown}
-            dropdownTextStyles={styles.dropdownText}
-            placeholderStyle={styles.placeholder}
-            selected={prevFile}
-          />
-          <ScrollView>
-          {imageUri && (
-        <Image
-          source={{ uri: imageUri }}
-          style={{backgroundColor:'pink', width:335, height:150}}
-          resizeMode="stretch"
-        />
-      )}
-          
-        </ScrollView>
-        </View> */}
       </View>
       <View
         style={{
@@ -229,12 +301,13 @@ const HomeScreen: React.FC = () => {
           justifyContent: 'space-between',
           alignItems: 'center',
           marginLeft: 60,
-          marginTop:310,
+          marginTop:270,
         }}>
         <View>
-          <Text style={{fontSize: 30, fontWeight: 'bold', color: 'purple', marginTop:10}}>
+          <Text style={{fontSize: 30, fontWeight: 'bold', color: 'purple', marginTop:-40, alignItems:'center'}}>
             {rpmValue}
           </Text>
+          
         </View>
         <View
           style={{
@@ -263,7 +336,10 @@ const HomeScreen: React.FC = () => {
           </View>
         </Modal>
       )}
+      
     </View>
+    
+  
   );
 };
 
@@ -313,10 +389,10 @@ const styles = StyleSheet.create({
   },
   closeButton: {
     position: 'absolute',
-    top: 57, // Adjust for vertical spacing
-    left: 6, // Adjust for horizontal spacing
-    width: 40,
-    height: 40,
+    bottom: 50, // Adjust for vertical spacing
+    right: 8, // Adjust for horizontal spacing
+    width: 50,
+    height: 50,
     backgroundColor: '#812892',
     borderRadius: 30, // Circular button
     justifyContent: 'center',
@@ -329,10 +405,10 @@ const styles = StyleSheet.create({
   },
   floatingButton: {
     position: 'absolute',
-    top: 1, // Adjust for vertical spacing
-    left: 6, // Adjust for horizontal spacing
-    width: 40,
-    height: 40,
+    bottom: 50, // Adjust for vertical spacing
+    right: 8, // Adjust for horizontal spacing
+    width: 50,
+    height: 50,
     backgroundColor: '#812892',
     borderRadius: 30, // Circular button
     justifyContent: 'center',
@@ -342,6 +418,19 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.3,
     shadowRadius: 4,
+  },
+  spinner: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    borderWidth: 5,
+    borderColor: '#3498db',
+    borderTopColor: 'transparent',
+  },
+  image: {
+    width: 335,
+    height: 250,
+    marginTop: 20,
   },
 });
 

@@ -9,6 +9,7 @@ import {
   TouchableOpacity,
   Modal,
   TextInput,
+  BackHandler,
   ToastAndroid,
 } from 'react-native';
 import DocumentPicker from 'react-native-document-picker';
@@ -17,29 +18,54 @@ import {useMyContext} from '../Components/MyContext';
 import { useFocusEffect } from '@react-navigation/native';
 import axios from 'axios';
 Icon.loadFont();
-
+import { useTranslation } from 'react-i18next'; // Hook to access translation
+import '../services/i18n';
+import i18next from "i18next";
 const FilesScreen: React.FC<{navigation: any}> = ({navigation}) => {
   const {
-    deleteFile
+    deleteFile,
+    webData,
   } = useMyContext();
+  const { t, i18n } = useTranslation();
   const [modalVisible, setModalVisible] = useState(false);
   const [inputText, setInputText] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
+
+  // Find the user with id: "2" (string comparison)
+// const user = webData.find(item => item.usr_id === "3");  // Use string comparison for usr_id
+
+// If user with id: "2" exists, display their password, else display an error message
+// const userPassword = user ? user.usr_pwd : 'User not found';
+  useEffect(() => {
+      // Ensure re-render when language changes
+      console.log('Current language:', i18n.language);
+    }, [i18n.language]);
   useEffect(() => {
     // Show the overlay when the component mounts
     setModalVisible(true);
   }, []);
 
-  const correctPassword = 'mySecret'; // Define your authentication value here
+  // const correctPassword = userPassword; // Define your authentication value here
+  const correctPassword = 'Mj125';
+  // useFocusEffect(
+  //   React.useCallback(() => {
+  //     setModalVisible(true); // Show the modal whenever the screen is focused
+  //   }, [])
+  // );
   useFocusEffect(
     React.useCallback(() => {
-      setModalVisible(true); // Show the modal whenever the screen is focused
+      setModalVisible(true); // Show the modal when screen gains focus
+      const backHandler = BackHandler.addEventListener('hardwareBackPress', handleBackPress);
+
+      // Clean up back handler when screen loses focus
+      return () => backHandler.remove();
     }, [])
   );
   const handleBackPress = () => {
     if (modalVisible) {
       setModalVisible(false); // Optional: Close the modal before navigating
-      navigation.navigate('Home'); // Navigate to the Home screen
+      // navigation.navigate('HomeScreen'); // Navigate to the Home screen
+      navigation.goBack();
       return true; // Prevent closing the modal
     }
     return false; // Allow closing if the modal is not visible
@@ -64,8 +90,8 @@ const FilesScreen: React.FC<{navigation: any}> = ({navigation}) => {
   useEffect(() => {
     // Show the alert when the component mounts
     Alert.alert(
-      'Please Connect to Marvel Wi-fi ',
-      "you can't access files without wi-fi connection!",
+      i18next.t('Please Connect to Marvel Jacquards Wi-Fi'),
+      i18next.t('you can not access files without wi-fi connection!'),
       [
         {
           text: 'OK',
@@ -148,10 +174,14 @@ const FilesScreen: React.FC<{navigation: any}> = ({navigation}) => {
   // Handle file selection
   const handleSelect = filename => {
     setSelectedFile(filename);
+    // const myFile = selectedFile.endsWith('.bmp') ? selectedFile.replace('.bmp', '') : selectedFile;
+    const myFile = filename.substring(0, filename.lastIndexOf('.'));
+    console.log("without extension:",myFile);
+    console.log("Deletion File Name",selectedFile);
     Alert.alert('File Selected', `You selected: ${selectedFile}`, [
       {
         text: 'Delete',
-        onPress: () => deleteFile(selectedFile),
+        onPress: () => deleteFile(myFile),
         style: 'cancel',
       },
       {text: 'Cancel', onPress: () => console.log('Deletion Cancelled')},
@@ -175,7 +205,7 @@ const FilesScreen: React.FC<{navigation: any}> = ({navigation}) => {
           </>
         )}
       />
-      <Button title="List Files" onPress={fetchFiles} />
+      <Button title={t('List Files')} onPress={fetchFiles} />
 
       <View
         style={{
@@ -184,9 +214,9 @@ const FilesScreen: React.FC<{navigation: any}> = ({navigation}) => {
           paddingHorizontal: 5,
           marginHorizontal: 10,
         }}>
-        <Button title="Select file" onPress={pickFile} />
+        <Button title={t('Select Files')} onPress={pickFile} />
         <Text> </Text>
-        <Button title="Upload file" onPress={uploadFile} />
+        <Button title={t('Upload File')} onPress={uploadFile} />
       </View>
       <Modal
         transparent={true}

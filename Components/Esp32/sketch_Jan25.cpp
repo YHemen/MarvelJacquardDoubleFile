@@ -4,16 +4,15 @@
 #include <BLEUtils.h>
 #include <BLE2902.h>
 #include <string.h>
-#include <WiFi.h>
-#include <AsyncTCP.h>
-#include <ESPAsyncWebServer.h>
 #include "FS.h"
 #include "SD.h"
 #include "SPI.h"
 #include "SD_MMC.h"
 #include "uRTCLib.h"
-#include<EEPROM.h>
-
+#include <EEPROM.h>
+#include <WiFi.h>
+#include <AsyncTCP.h>
+#include <ESPAsyncWebServer.h>
 
 #define EN_Pin 35//20
 #define clk_Pin 8//21
@@ -33,7 +32,8 @@
 #define data_Pin14  16
 #define data_Pin15  17
 #define data_Pin16  18
-
+#define STRING_START_ADDRESS 27 // Start storing strings at address 25
+#define DEFAULT_NAME "MarvelJacquards"
 
 
 void Data_passing(int con_size);
@@ -54,9 +54,9 @@ const long interval = 300; // interval at which to check if the task is complete
 #define MOSI  12
 #define CS  13
 
-#define ssid "YTANISHKAA"
-#define password "PASSWORD"
-
+//*WiFi Settings*//
+#define ssid "MarvelJacquard"
+#define password "password"
 IPAddress local_IP(192, 168, 4, 1);
 IPAddress gateway(192, 168, 4, 1);
 IPAddress subnet(255, 255, 255, 0);
@@ -73,17 +73,13 @@ AsyncWebServer server(80);
 #define CHARACTERISTIC_UUID2 "beb5483e-36e1-4686-b7f5-ea07361b26a8" // sd files read from client 
 #define CHARACTERISTIC_UUID3 "beb5483e-36e1-4687-b7f5-ea07361b26a8" // width
 #define CHARACTERISTIC_UUID4 "beb5483e-36e1-4688-b7f5-ea07361b26a8" // height
-#define CHARACTERISTIC_UUID5 "beb5483e-36e1-4689-b7f5-ea07361b26a8" // 
-#define CHARACTERISTIC_UUID6 "beb5483e-36e2-4680-b7f5-ea07361b26a8" // 
-
+//#define CHARACTERISTIC_UUID5 "beb5483e-36e1-4689-b7f5-ea07361b26a8" // 
+//#define CHARACTERISTIC_UUID6 "beb5483e-36e2-4680-b7f5-ea07361b26a8" // 
 #define CHARACTERISTIC_UUID11 "beb5483e-36e2-4670-b7f5-ea07361b26a8" // sd files read from client modes
-
 #define CHARACTERISTIC_UUID22 "beb5483e-36e2-4671-b7f5-ea07361b26a8" // sd files read from client modes
 
-
-
-#define temp_number 128
-#define number_of_cards1 temp_number /// 16*8
+#define temp_number 96
+#define number_of_cards1 temp_number /// 12*8
 
 int  sen1=47;
 int  sen2=48;
@@ -99,15 +95,15 @@ String RPM_String="RPM.";
 String previousValue = "";
 String previousValue2 = "";
 String temp_str=".";
+String unlockString="";
+String lockString="";
 String combinedString="";
 String combinedString88="";
-String total_hook="";
 String result2;
 String result222;
 String lockstatus="locked";
 String unlockstatus="unlocked";
-std::string receivedData3 ;
-std::string selectedFile=""; 
+std::string receivedData3 ; 
 char  comp_string1[]="allu";
 char  comp_string2[]="alld";
 char  comp_string3[]="8up8d";
@@ -120,15 +116,23 @@ String separatedStrings3[3];
 String separatedStrings4[3];
 String separatedStrings5[3];
 String separatedStrings6[3];
-
+String filename_to_app;
+String combinedString22="";
+String combinedString33="";
+String combinedString44="";
+String combinedString55="";
+String newcpu_name="";
+String storedString = ""; //readStringFromEEPROM(STRING_START_ADDRESS);
+//Serial.println("Updated EEPROM content: " + storedString);
+String total_hook="";
 
 BLEServer* pServer = NULL;
 BLECharacteristic* pCharacteristic = NULL;
 BLECharacteristic* pCharacteristic2 = NULL;
 BLECharacteristic* pCharacteristic3 = NULL;
 BLECharacteristic* pCharacteristic4 = NULL;
-BLECharacteristic* pCharacteristic5 = NULL;
-BLECharacteristic* pCharacteristic6 = NULL;
+//BLECharacteristic* pCharacteristic5 = NULL;
+//BLECharacteristic* pCharacteristic6 = NULL;
 BLECharacteristic* pCharacteristic11 = NULL;
 BLECharacteristic* pCharacteristic22 = NULL;
 
@@ -139,9 +143,9 @@ volatile bool sensor2Triggered = false;
 uint32_t value = 0;
 static int card_count=0;
 static int connector_count=1;
-static int max_cardcount=16;
+static int max_cardcount=12;
 static int max_connector=16;
-static int16_t ttl_hks=0;
+// static int total_hook;
 static int width = 0;
 static int height= 0;
 static int height_var=0;
@@ -149,12 +153,10 @@ static uint32_t present=0;
 static uint32_t prev=53;
 static uint16_t rtc_flag=0;
 static int heightcounter_reset=0;
-
 static uint16_t RPM_flag=0;
-
 static uint32_t temp_present=0;
 static uint32_t temp_prev=0;
-
+uint16_t ttl_hks=0;
 
 static int triggerTimeReached = 1;
 
@@ -252,7 +254,7 @@ struct struc_variable
   uint8_t myVariable14= 0;
   uint8_t myVariable15= 0;
   uint8_t myVariable16= 0;
-  }e1,e2,e3,e4,e5,e6,e7,e8,e9,e10,e11,e12,e13,e14,e15,e16;
+  }e1,e2,e3,e4,e5,e6,e7,e8,e9,e10,e11,e12;
 
 
   void clearData(struct struc_variable *connector) 
@@ -423,38 +425,41 @@ void shiftOut3(uint8_t data1,uint8_t data2,uint8_t data3,uint8_t data4,uint8_t d
     
 }
 
-class MyNotifyCharacteristic : public BLECharacteristicCallbacks {
-public:
-    // This function will be called when a notification is sent
-    void onNotify(BLECharacteristic *pCharacteristic) override {
-        Serial.println("Notification sent.");
+void writeStringToEEPROM(int startAddress, const String &data) {
+  int length = data.length();
+  for (int i = 0; i < length; i++) {
+    EEPROM.write(startAddress + i, data[i]);
+  }
+  // Write a null terminator to indicate the end of the string
+  EEPROM.write(startAddress + length, '\0');
+  EEPROM.commit(); // Save changes
+  Serial.println("String written to EEPROM");
+}
+
+String readStringFromEEPROM(int startAddress) {
+  String data = "";
+  char c = EEPROM.read(startAddress);
+  
+  // Read the characters until the null terminator is found
+  while (c != '\0') {
+    data += c;
+    startAddress++;
+    c = EEPROM.read(startAddress);
+  }
+
+  return data;
+}
+
+
+
+bool isAlphanumeric(const String& str) {
+    for (unsigned int i = 0; i < str.length(); i++) {
+        if (!isalnum(str[i])) {
+            return false;  // If any character is not alphanumeric, return false
+        }
     }
-
-    // This function will send a notification with the combined string
-    // void notifyWidthHeightCharacteristic() {
-    //     String combinedString = heightWidth(); // Call the function to get dimensions
-    //     pCharacteristic3->setValue(combinedString.c_str()); // Set value as a C-string 
-    //     pCharacteristic3->notify();
-    //     Serial.print("Notification sent: ");
-    //     Serial.println(combinedString.c_str()); 
-    // }
-    // void setCharacteristic(BLECharacteristic *characteristic) {
-    //     pCharacteristic3 = characteristic;
-    // }
-     // This function will send a notification with the combined string
-    // void notifyCardCnCharacteristic(const String &total_hook) {
-    //     pCharacteristic22->setValue(total_hook.c_str()); // Set value as a C-string
-    //     pCharacteristic22->notify();
-    //     Serial.print("Notification sent: ");
-    //     Serial.println(total_hook.c_str());
-    // }
-
-    // Set the characteristic to use for notifications
-    // void setCardCnCharacteristic(BLECharacteristic *characteristic) {
-    //     pCharacteristic22 = characteristic;
-    // }
-};
-MyNotifyCharacteristic notifyCallbacks;
+    return true;  // All characters are alphanumeric
+}
 
 void listDir(fs::FS &fs, const char * dirname, uint8_t levels)
 {
@@ -545,8 +550,6 @@ void readBMPDimensions2(const char* filename)
     Serial.print("Height: ");
     Serial.println(height);
     // Check if it's a 1-bit BMP file
-    
-
   }
   file.close();
 }
@@ -577,17 +580,6 @@ void readBMPDimensions(const char* filename)
     Serial.println(width);
     Serial.print("Height: ");
     Serial.println(height);
-    // trial & error
-          if (pCharacteristic3) {
-           temp_str=".";
-          combinedString = width +temp_str+height;
-          pCharacteristic3->setValue((uint8_t*)&combinedString, sizeof(combinedString));
-        pCharacteristic3->notify();
-        delay(10);
-    } else {
-        Serial.println("pCharacteristic3 is not initialized!");
-    }
-          
     // Check if it's a 1-bit BMP file
     if(read16() != 1) 
     {
@@ -595,7 +587,6 @@ void readBMPDimensions(const char* filename)
       file.close();
       return;
     }
-    
       // Calculate the number of bytes per row (including padding)
     int bytesPerRow = (width + 7) / 8;
     file.seek(54);  // Move to the start of pixel data
@@ -732,47 +723,16 @@ void readBMPDimensions(const char* filename)
               if (data== 1)
               {
                 e12.myVariable1 |= (1 << bitToSet);
-              }
-              //Serial.println(bitToSet);
-              card_count=12;
-              break;
-              case 12:
-              if (data== 1)
-              {
-                e13.myVariable1 |= (1 << bitToSet);
-              }
-              // Serial.println(bitToSet);
-              card_count=13;
-              break;
-              case 13:
-              if (data== 1)
-              {
-                e14.myVariable1 |= (1 << bitToSet);
-              }
-               //Serial.println(bitToSet);
-              card_count=14;
-              break;
-              case 14:
-              if (data== 1)
-              {
-                e15.myVariable1 |= (1 << bitToSet);
-              }
-               //Serial.println(bitToSet);
-              card_count=15;
-              break;
-              case 15:
-              if (data== 1)
-              {
-                e16.myVariable1 |= (1 << bitToSet);
                 
               }
                //Serial.println(bitToSet);
-               card_count=16;
+               card_count=12;
               break;
               default :
               break;
             }   
         }   
+
         else if(connector_count==2)
         {
            //Serial.println("connector2");
@@ -870,49 +830,17 @@ void readBMPDimensions(const char* filename)
               break;
               case 11:
               if (data== 1)
-               {
+              {
                 e12.myVariable2 |= (1 << bitToSet);
-              }
-              //Serial.println(bitToSet);
-              card_count=12;
-              break;
-              case 12:
-              if (data== 1)
-              {
-                e13.myVariable2 |= (1 << bitToSet);
-              }
-              // Serial.println(bitToSet);
-              card_count=13;
-              break;
-              case 13:
-              if (data== 1)
-              {
-                e14.myVariable2 |= (1 << bitToSet);
-              }
-               //Serial.println(bitToSet);
-              card_count=14;
-              break;
-              case 14:
-              if (data== 1)
-              {
-                e15.myVariable2 |= (1 << bitToSet);
-              }
-               //Serial.println(bitToSet);
-              card_count=15;
-              break;
-              case 15:
-              if (data== 1)
-              {
-                e16.myVariable2 |= (1 << bitToSet);
                 
               }
                //Serial.println(bitToSet);
-               card_count=16;
+               card_count=12;
               break;
               default :
               break;
             }   
-        }   
+        }  
         else if(connector_count==3)
         {
             switch(card_count)
@@ -1009,49 +937,17 @@ void readBMPDimensions(const char* filename)
               break;
               case 11:
               if (data== 1)
-               {
+              {
                 e12.myVariable3 |= (1 << bitToSet);
-              }
-              //Serial.println(bitToSet);
-              card_count=12;
-              break;
-              case 12:
-              if (data== 1)
-              {
-                e13.myVariable3 |= (1 << bitToSet);
-              }
-              // Serial.println(bitToSet);
-              card_count=13;
-              break;
-              case 13:
-              if (data== 1)
-              {
-                e14.myVariable3 |= (1 << bitToSet);
-              }
-               //Serial.println(bitToSet);
-              card_count=14;
-              break;
-              case 14:
-              if (data== 1)
-              {
-                e15.myVariable3 |= (1 << bitToSet);
-              }
-               //Serial.println(bitToSet);
-              card_count=15;
-              break;
-              case 15:
-              if (data== 1)
-              {
-                e16.myVariable3 |= (1 << bitToSet);
                 
               }
                //Serial.println(bitToSet);
-               card_count=16;
+               card_count=12;
               break;
               default :
               break;
             }   
-        }   
+        }  
         else if(connector_count==4)
         {
             switch(card_count)
@@ -1148,49 +1044,17 @@ void readBMPDimensions(const char* filename)
               break;
               case 11:
               if (data== 1)
-               {
+              {
                 e12.myVariable4 |= (1 << bitToSet);
-              }
-              //Serial.println(bitToSet);
-              card_count=12;
-              break;
-              case 12:
-              if (data== 1)
-              {
-                e13.myVariable4 |= (1 << bitToSet);
-              }
-              // Serial.println(bitToSet);
-              card_count=13;
-              break;
-              case 13:
-              if (data== 1)
-              {
-                e14.myVariable4 |= (1 << bitToSet);
-              }
-               //Serial.println(bitToSet);
-              card_count=14;
-              break;
-              case 14:
-              if (data== 1)
-              {
-                e15.myVariable4 |= (1 << bitToSet);
-              }
-               //Serial.println(bitToSet);
-              card_count=15;
-              break;
-              case 15:
-              if (data== 1)
-              {
-                e16.myVariable4 |= (1 << bitToSet);
                 
               }
                //Serial.println(bitToSet);
-               card_count=16;
+               card_count=12;
               break;
               default :
               break;
             }   
-        }   
+        }  
 
 
         else if(connector_count==5)
@@ -1289,49 +1153,17 @@ void readBMPDimensions(const char* filename)
               break;
               case 11:
               if (data== 1)
-               {
+              {
                 e12.myVariable5 |= (1 << bitToSet);
-              }
-              //Serial.println(bitToSet);
-              card_count=12;
-              break;
-              case 12:
-              if (data== 1)
-              {
-                e13.myVariable5 |= (1 << bitToSet);
-              }
-              // Serial.println(bitToSet);
-              card_count=13;
-              break;
-              case 13:
-              if (data== 1)
-              {
-                e14.myVariable5 |= (1 << bitToSet);
-              }
-               //Serial.println(bitToSet);
-              card_count=14;
-              break;
-              case 14:
-              if (data== 1)
-              {
-                e15.myVariable5 |= (1 << bitToSet);
-              }
-               //Serial.println(bitToSet);
-              card_count=15;
-              break;
-              case 15:
-              if (data== 1)
-              {
-                e16.myVariable5 |= (1 << bitToSet);
                 
               }
                //Serial.println(bitToSet);
-               card_count=16;
+               card_count=12;
               break;
               default :
               break;
             }   
-        }   
+        }  
 
         else if(connector_count==6)
         {
@@ -1429,49 +1261,17 @@ void readBMPDimensions(const char* filename)
               break;
               case 11:
               if (data== 1)
-               {
+              {
                 e12.myVariable6 |= (1 << bitToSet);
-              }
-              //Serial.println(bitToSet);
-              card_count=12;
-              break;
-              case 12:
-              if (data== 1)
-              {
-                e13.myVariable6 |= (1 << bitToSet);
-              }
-              // Serial.println(bitToSet);
-              card_count=13;
-              break;
-              case 13:
-              if (data== 1)
-              {
-                e14.myVariable6 |= (1 << bitToSet);
-              }
-               //Serial.println(bitToSet);
-              card_count=14;
-              break;
-              case 14:
-              if (data== 1)
-              {
-                e15.myVariable6 |= (1 << bitToSet);
-              }
-               //Serial.println(bitToSet);
-              card_count=15;
-              break;
-              case 15:
-              if (data== 1)
-              {
-                e16.myVariable6 |= (1 << bitToSet);
                 
               }
                //Serial.println(bitToSet);
-               card_count=16;
+               card_count=12;
               break;
               default :
               break;
             }   
-        }   
+        }  
         else if(connector_count==7)
         {
             switch(card_count)
@@ -1570,47 +1370,15 @@ void readBMPDimensions(const char* filename)
               if (data== 1)
               {
                 e12.myVariable7 |= (1 << bitToSet);
-              }
-              //Serial.println(bitToSet);
-              card_count=12;
-              break;
-              case 12:
-              if (data== 1)
-              {
-                e13.myVariable7 |= (1 << bitToSet);
-              }
-              // Serial.println(bitToSet);
-              card_count=13;
-              break;
-              case 13:
-              if (data== 1)
-              {
-                e14.myVariable7 |= (1 << bitToSet);
-              }
-               //Serial.println(bitToSet);
-              card_count=14;
-              break;
-              case 14:
-              if (data== 1)
-              {
-                e15.myVariable7 |= (1 << bitToSet);
-              }
-               //Serial.println(bitToSet);
-              card_count=15;
-              break;
-              case 15:
-              if (data== 1)
-              {
-                e16.myVariable7 |= (1 << bitToSet);
                 
               }
                //Serial.println(bitToSet);
-               card_count=16;
+               card_count=12;
               break;
               default :
               break;
             }   
-        }   
+        }  
         else if(connector_count==8)
         {
             switch(card_count)
@@ -1709,47 +1477,15 @@ void readBMPDimensions(const char* filename)
               if (data== 1)
               {
                 e12.myVariable8 |= (1 << bitToSet);
-              }
-              //Serial.println(bitToSet);
-              card_count=12;
-              break;
-              case 12:
-              if (data== 1)
-              {
-                e13.myVariable8 |= (1 << bitToSet);
-              }
-              // Serial.println(bitToSet);
-              card_count=13;
-              break;
-              case 13:
-              if (data== 1)
-              {
-                e14.myVariable8 |= (1 << bitToSet);
-              }
-               //Serial.println(bitToSet);
-              card_count=14;
-              break;
-              case 14:
-              if (data== 1)
-              {
-                e15.myVariable8 |= (1 << bitToSet);
-              }
-               //Serial.println(bitToSet);
-              card_count=15;
-              break;
-              case 15:
-              if (data== 1)
-              {
-                e16.myVariable8 |= (1 << bitToSet);
                 
               }
                //Serial.println(bitToSet);
-               card_count=16;
+               card_count=12;
               break;
               default :
               break;
             }   
-        }   
+        }  
 
         else if(connector_count==9)
         {
@@ -1849,47 +1585,15 @@ void readBMPDimensions(const char* filename)
               if (data== 1)
               {
                 e12.myVariable9 |= (1 << bitToSet);
-              }
-              //Serial.println(bitToSet);
-              card_count=12;
-              break;
-              case 12:
-              if (data== 1)
-              {
-                e13.myVariable9 |= (1 << bitToSet);
-              }
-              // Serial.println(bitToSet);
-              card_count=13;
-              break;
-              case 13:
-              if (data== 1)
-              {
-                e14.myVariable9 |= (1 << bitToSet);
-              }
-               //Serial.println(bitToSet);
-              card_count=14;
-              break;
-              case 14:
-              if (data== 1)
-              {
-                e15.myVariable9 |= (1 << bitToSet);
-              }
-               //Serial.println(bitToSet);
-              card_count=15;
-              break;
-              case 15:
-              if (data== 1)
-              {
-                e16.myVariable9 |= (1 << bitToSet);
                 
               }
                //Serial.println(bitToSet);
-               card_count=16;
+               card_count=12;
               break;
               default :
               break;
             }   
-        }   
+        }  
         else if(connector_count==10)
         {
             switch(card_count)
@@ -1986,49 +1690,18 @@ void readBMPDimensions(const char* filename)
               break;
               case 11:
               if (data== 1)
-               {
+              {
                 e12.myVariable10 |= (1 << bitToSet);
-              }
-              //Serial.println(bitToSet);
-              card_count=12;
-              break;
-              case 12:
-              if (data== 1)
-              {
-                e13.myVariable10|= (1 << bitToSet);
-              }
-              // Serial.println(bitToSet);
-              card_count=13;
-              break;
-              case 13:
-              if (data== 1)
-              {
-                e14.myVariable10 |= (1 << bitToSet);
-              }
-               //Serial.println(bitToSet);
-              card_count=14;
-              break;
-              case 14:
-              if (data== 1)
-              {
-                e15.myVariable10 |= (1 << bitToSet);
-              }
-               //Serial.println(bitToSet);
-              card_count=15;
-              break;
-              case 15:
-              if (data== 1)
-              {
-                e16.myVariable10 |= (1 << bitToSet);
                 
               }
                //Serial.println(bitToSet);
-               card_count=16;
+               card_count=12;
               break;
               default :
               break;
             }   
-        }   
+        }  
+
         else if(connector_count==11)
         {
             switch(card_count)
@@ -2126,48 +1799,16 @@ void readBMPDimensions(const char* filename)
               case 11:
               if (data== 1)
               {
-                e12.myVariable11|= (1 << bitToSet);
-              }
-              //Serial.println(bitToSet);
-              card_count=12;
-              break;
-              case 12:
-              if (data== 1)
-              {
-                e13.myVariable11 |= (1 << bitToSet);
-              }
-              // Serial.println(bitToSet);
-              card_count=13;
-              break;
-              case 13:
-              if (data== 1)
-              {
-                e14.myVariable11 |= (1 << bitToSet);
-              }
-               //Serial.println(bitToSet);
-              card_count=14;
-              break;
-              case 14:
-              if (data== 1)
-              {
-                e15.myVariable11 |= (1 << bitToSet);
-              }
-               //Serial.println(bitToSet);
-              card_count=15;
-              break;
-              case 15:
-              if (data== 1)
-              {
-                e16.myVariable11 |= (1 << bitToSet);
+                e12.myVariable11 |= (1 << bitToSet);
                 
               }
                //Serial.println(bitToSet);
-               card_count=16;
+               card_count=12;
               break;
               default :
               break;
             }   
-        }   
+        } 
         else if(connector_count==12)
         {
             switch(card_count)
@@ -2264,49 +1905,18 @@ void readBMPDimensions(const char* filename)
               break;
               case 11:
               if (data== 1)
-               {
-                e12.myVariable12|= (1 << bitToSet);
-              }
-              //Serial.println(bitToSet);
-              card_count=12;
-              break;
-              case 12:
-              if (data== 1)
               {
-                e13.myVariable12 |= (1 << bitToSet);
-              }
-              // Serial.println(bitToSet);
-              card_count=13;
-              break;
-              case 13:
-              if (data== 1)
-              {
-                e14.myVariable12 |= (1 << bitToSet);
-              }
-               //Serial.println(bitToSet);
-              card_count=14;
-              break;
-              case 14:
-              if (data== 1)
-              {
-                e15.myVariable12 |= (1 << bitToSet);
-              }
-               //Serial.println(bitToSet);
-              card_count=15;
-              break;
-              case 15:
-              if (data== 1)
-              {
-                e16.myVariable12 |= (1 << bitToSet);
+                e12.myVariable12 |= (1 << bitToSet);
                 
               }
                //Serial.println(bitToSet);
-               card_count=16;
+               card_count=12;
               break;
               default :
               break;
             }   
-        }   
+        } 
+
         else if(connector_count==13)
         {
             switch(card_count)
@@ -2405,47 +2015,16 @@ void readBMPDimensions(const char* filename)
               if (data== 1)
               {
                 e12.myVariable13 |= (1 << bitToSet);
-              }
-              //Serial.println(bitToSet);
-              card_count=12;
-              break;
-              case 12:
-              if (data== 1)
-              {
-                e13.myVariable13 |= (1 << bitToSet);
-              }
-              // Serial.println(bitToSet);
-              card_count=13;
-              break;
-              case 13:
-              if (data== 1)
-              {
-                e14.myVariable13 |= (1 << bitToSet);
-              }
-               //Serial.println(bitToSet);
-              card_count=14;
-              break;
-              case 14:
-              if (data== 1)
-              {
-                e15.myVariable13 |= (1 << bitToSet);
-              }
-               //Serial.println(bitToSet);
-              card_count=15;
-              break;
-              case 15:
-              if (data== 1)
-              {
-                e16.myVariable13 |= (1 << bitToSet);
                 
               }
                //Serial.println(bitToSet);
-               card_count=16;
+               card_count=12;
               break;
               default :
               break;
             }   
-        }   
+        }  
+
         else if(connector_count==14)
         {
             switch(card_count)
@@ -2544,47 +2123,15 @@ void readBMPDimensions(const char* filename)
               if (data== 1)
               {
                 e12.myVariable14 |= (1 << bitToSet);
-              }
-              //Serial.println(bitToSet);
-              card_count=12;
-              break;
-              case 12:
-              if (data== 1)
-              {
-                e13.myVariable14 |= (1 << bitToSet);
-              }
-              // Serial.println(bitToSet);
-              card_count=13;
-              break;
-              case 13:
-              if (data== 1)
-              {
-                e14.myVariable14 |= (1 << bitToSet);
-              }
-               //Serial.println(bitToSet);
-              card_count=14;
-              break;
-              case 14:
-              if (data== 1)
-              {
-                e15.myVariable14 |= (1 << bitToSet);
-              }
-               //Serial.println(bitToSet);
-              card_count=15;
-              break;
-              case 15:
-              if (data== 1)
-              {
-                e16.myVariable14 |= (1 << bitToSet);
                 
               }
                //Serial.println(bitToSet);
-               card_count=16;
+               card_count=12;
               break;
               default :
               break;
             }   
-        }   
+        }  
 
         else if(connector_count==15)
         {
@@ -2682,44 +2229,12 @@ void readBMPDimensions(const char* filename)
               break;
               case 11:
               if (data== 1)
-             {
+              {
                 e12.myVariable15 |= (1 << bitToSet);
-              }
-              //Serial.println(bitToSet);
-              card_count=12;
-              break;
-              case 12:
-              if (data== 1)
-              {
-                e13.myVariable15 |= (1 << bitToSet);
-              }
-              // Serial.println(bitToSet);
-              card_count=13;
-              break;
-              case 13:
-              if (data== 1)
-              {
-                e14.myVariable15 |= (1 << bitToSet);
-              }
-               //Serial.println(bitToSet);
-              card_count=14;
-              break;
-              case 14:
-              if (data== 1)
-              {
-                e15.myVariable15 |= (1 << bitToSet);
-              }
-               //Serial.println(bitToSet);
-              card_count=15;
-              break;
-              case 15:
-              if (data== 1)
-              {
-                e16.myVariable15 |= (1 << bitToSet);
                 
               }
                //Serial.println(bitToSet);
-               card_count=16;
+               card_count=12;
               break;
               default :
               break;
@@ -2822,49 +2337,17 @@ void readBMPDimensions(const char* filename)
               break;
               case 11:
               if (data== 1)
-               {
+              {
                 e12.myVariable16 |= (1 << bitToSet);
-              }
-              //Serial.println(bitToSet);
-              card_count=12;
-              break;
-              case 12:
-              if (data== 1)
-              {
-                e13.myVariable16 |= (1 << bitToSet);
-              }
-              // Serial.println(bitToSet);
-              card_count=13;
-              break;
-              case 13:
-              if (data== 1)
-              {
-                e14.myVariable16 |= (1 << bitToSet);
-              }
-               //Serial.println(bitToSet);
-              card_count=14;
-              break;
-              case 14:
-              if (data== 1)
-              {
-                e15.myVariable16 |= (1 << bitToSet);
-              }
-               //Serial.println(bitToSet);
-              card_count=15;
-              break;
-              case 15:
-              if (data== 1)
-              {
-                e16.myVariable16 |= (1 << bitToSet);
                 
               }
                //Serial.println(bitToSet);
-               card_count=16;
+               card_count=12;
               break;
               default :
               break;
             }   
-        }   
+        }  
       }
         if(bitToSet==0&&card_count==max_cardcount)
         { 
@@ -3134,7 +2617,6 @@ class MyServerCallbacks: public BLEServerCallbacks
       
       temp_count=0;
       temp_count2=0;
-
     };
 
 
@@ -3236,7 +2718,6 @@ void separateString(String input)
      // Serial.println(max_cardcount);
      // Serial.print("Maximum Connector count=");
      // Serial.println(max_connector);
-
   }
 
 
@@ -3294,11 +2775,6 @@ void separateString2(String input)
       sensor_sel1=0;
       temp_sens_check=0;
       mem_cpy_set=1;
-      // ttl_hks=max_cardcount*max_connector*8;
-      // total_hook = String(ttl_hks);
-      // notifyCallbacks.notifyCardCnCharacteristic(total_hook);
-      // pCharacteristic22->setValue((uint8_t*)&total_hook, sizeof(total_hook));
-      // pCharacteristic22->notify();
       //Data_passing_clear();
       cleardata();
       //Data_passing_clear();
@@ -3512,7 +2988,9 @@ Serial.println(triggerTimeReached);
 
   if(unlockstatus_count==0)
   {
-  pCharacteristic->setValue(unlockstatus.c_str());
+  String temp_ls= "LS/";
+  unlockString = temp_ls + unlockstatus;
+  pCharacteristic->setValue(unlockString.c_str());
   pCharacteristic->notify();
   }
   unlockstatus_count=1;
@@ -3582,7 +3060,7 @@ void setup()
   esp_ble_tx_power_set(ESP_BLE_PWR_TYPE_SCAN, ESP_PWR_LVL_P9 ); // Set power for scanning
   esp_ble_tx_power_set(ESP_BLE_PWR_TYPE_DEFAULT, ESP_PWR_LVL_P9 ); // Set default power
 
-  EEPROM.begin(25);
+  EEPROM.begin(50);
   Serial.begin(115200);
   pinMode(EN_Pin, OUTPUT);
   pinMode(clk_Pin, OUTPUT);
@@ -3651,72 +3129,112 @@ void setup()
   }
   uint64_t cardSize = SD.cardSize() / (1024 * 1024);
   Serial.printf("SD Card Size: %lluMB\n", cardSize);
+  listDir(SD, "/", 0);
+  
   // Setup WiFi access point
- WiFi.softAP(ssid, password);
+  WiFi.softAP(ssid, password);
   WiFi.softAPConfig(local_IP, gateway, subnet);
   delay(1000);
-    // server.begin();
+  // server.begin();
   Serial.println("HTTP Server Started");
   Serial.println("Connected to WiFi");
   IPAddress IP = WiFi.softAPIP();
   Serial.println(IP);
 
-  // Serve a simple HTML form for file upload
-  server.on("/", HTTP_GET, [](AsyncWebServerRequest *request){
+
+
+   // Serve a simple HTML form for file upload
+    server.on("/", HTTP_GET, [](AsyncWebServerRequest *request){
     String html = "<html><body><form action='/upload' method='POST' enctype='multipart/form-data'>";
     html += "<input type='file' name='file'/>";
     html += "<input type='submit' value='Upload'/>";
     html += "</form></body></html>";
     request->send(200, "text/html", html);
-  });
-  // Serve files from the SD card
-  server.on("/list-files", HTTP_GET, [](AsyncWebServerRequest *request){
-    String response = listFiles("/");
-    request->send(200, "text/plain", response);
-  });
-  // Handle file upload
-server.on("/upload", HTTP_POST, [](AsyncWebServerRequest *request) {
-    request->send(200, "text/plain", "File Uploaded Successfully");
-  }, [](AsyncWebServerRequest *request, String filename, size_t index, uint8_t *data, size_t len, bool final) {
-    static File uploadFile;
-    if (!index) {
-      String path = "/" + filename;
-      uploadFile = SD.open(path, FILE_WRITE);
-      if (!uploadFile) {
-        Serial.println("Failed to open file for writing");
-        return;
-      }
-      Serial.printf("Upload Start: %s\n", filename.c_str());
-    }
-    if (uploadFile) {
-      uploadFile.write(data, len);
-    }
-    if (final) {
-      uploadFile.close();
-      Serial.printf("Upload End Succesfully : %s (%u)\n", filename.c_str(), index + len);
-    }
-  });
+    });
 
-// Handle file retrieval
-server.on("/get-file", HTTP_GET, [](AsyncWebServerRequest *request){
-  if (request->hasParam("name")) {
-    String fileName = request->getParam("name")->value();
-    File file = SD.open("/" + fileName);
-    if (file) {
-      request->send(SD, "/" + fileName, "image/bmp"); // Change to correct MIME type
-      file.close();
+    // Serve files from the SD card
+    server.on("/list-files", HTTP_GET, [](AsyncWebServerRequest *request){
+      String response = listFiles("/");
+      request->send(200, "text/plain", response);
+    });
+    // Handle file upload
+    server.on("/upload", HTTP_POST, [](AsyncWebServerRequest *request) {
+        request->send(200, "text/plain", "File Uploaded Successfully");
+      }, [](AsyncWebServerRequest *request, String filename, size_t index, uint8_t *data, size_t len, bool final) {
+        static File uploadFile;
+        if (!index) {
+          String path = "/" + filename;
+          uploadFile = SD.open(path, FILE_WRITE);
+          if (!uploadFile) {
+            Serial.println("Failed to open file for writing");
+            return;
+          }
+          Serial.printf("Upload Start: %s\n", filename.c_str());
+        }
+        if (uploadFile) {
+          uploadFile.write(data, len);
+        }
+        if (final) {
+          uploadFile.close();
+          Serial.printf("Upload End Succesfully : %s (%u)\n", filename.c_str(), index + len);
+        }
+      });
+
+      // Handle file retrieval
+      server.on("/get-file", HTTP_GET, [](AsyncWebServerRequest *request){
+        if (request->hasParam("name")) {
+          String fileName = request->getParam("name")->value();
+          File file = SD.open("/" + fileName);
+          if (file) {
+            request->send(SD, "/" + fileName, "image/bmp"); // Change to correct MIME type
+            file.close();
+          } else {
+            request->send(404, "text/plain", "File not found");
+          }
+        } else {
+          request->send(400, "text/plain", "Missing file name parameter");
+        }
+      });
+          // Define the route for the POST request to store data in EEPROM
+  server.on("/updateuser", HTTP_POST, [](AsyncWebServerRequest *request) {
+    String newcpu_name = "";
+    
+    // Check if the 'cpu_name' parameter exists in the POST request
+    if (request->hasParam("cpu_name", true)) {
+        // Get the value of the 'cpu_name' parameter
+        newcpu_name = request->getParam("cpu_name", true)->value();
+        
+        // Write the new value to EEPROM
+        writeStringToEEPROM(STRING_START_ADDRESS, newcpu_name);
+
+        // Read back the updated string from EEPROM
+        storedString = readStringFromEEPROM(STRING_START_ADDRESS);
+
+        // Print the updated string to the Serial Monitor
+        Serial.println("Updated EEPROM content: " + storedString);
+
+        // Send a response back to the React Native app
+        request->send(200, "text/plain", "CPU Name updated successfully!");
     } else {
-      request->send(404, "text/plain", "File not found");
+        // If the parameter is not present, send an error response
+        request->send(400, "text/plain", "Missing 'cpu_name' parameter!");
     }
-  } else {
-    request->send(400, "text/plain", "Missing file name parameter");
-  }
 });
 
-  server.begin();
-  listDir(SD, "/", 0);
-  // Create the BLE Device
-  BLEDevice::init("Marvel CPU Board1");
+
+
+        server.begin();
+
+
+storedString =readStringFromEEPROM(STRING_START_ADDRESS);
+ // If the stored string is empty (no custom name set yet), use the default name
+     if (storedString.isEmpty() || !isAlphanumeric(storedString)) {
+        storedString = DEFAULT_NAME;
+        Serial.println(storedString);
+    }
+
+    // Initialize the BLE device with the stored name
+    BLEDevice::init(storedString.c_str());
   pServer = BLEDevice::createServer();
   pServer->setCallbacks(new MyServerCallbacks());
   BLEService *pService = pServer->createService(SERVICE_UUID);
@@ -3732,7 +3250,7 @@ server.on("/get-file", HTTP_GET, [](AsyncWebServerRequest *request){
                     );
   // Create a BLE Descriptor
   pCharacteristic->addDescriptor(new BLE2902());
-  pCharacteristic->setCallbacks(new MyNotifyCharacteristic());
+
 
   pCharacteristic2 = pService->createCharacteristic(
                       CHARACTERISTIC_UUID2,
@@ -3743,7 +3261,6 @@ server.on("/get-file", HTTP_GET, [](AsyncWebServerRequest *request){
                     );
   pCharacteristic2->addDescriptor(new BLE2902());
 
-  
   pCharacteristic3 = pService->createCharacteristic(
                       CHARACTERISTIC_UUID3,
                       BLECharacteristic::PROPERTY_READ   |
@@ -3752,7 +3269,6 @@ server.on("/get-file", HTTP_GET, [](AsyncWebServerRequest *request){
                       BLECharacteristic::PROPERTY_INDICATE
                     );
   pCharacteristic3->addDescriptor(new BLE2902());
-pCharacteristic3->setCallbacks(new MyNotifyCharacteristic());
 
   pCharacteristic4 = pService->createCharacteristic(
                       CHARACTERISTIC_UUID4,
@@ -3762,9 +3278,8 @@ pCharacteristic3->setCallbacks(new MyNotifyCharacteristic());
                       BLECharacteristic::PROPERTY_INDICATE
                     );
   pCharacteristic4->addDescriptor(new BLE2902());
-pCharacteristic4->setCallbacks(new MyNotifyCharacteristic());
-// pCharacteristic4->setCallbacks(new WriteFileCallbacks());
-  pCharacteristic5 = pService2->createCharacteristic(
+
+  /*pCharacteristic5 = pService->createCharacteristic(
                       CHARACTERISTIC_UUID5,
                       BLECharacteristic::PROPERTY_READ   |
                       BLECharacteristic::PROPERTY_WRITE  |
@@ -3772,17 +3287,17 @@ pCharacteristic4->setCallbacks(new MyNotifyCharacteristic());
                       BLECharacteristic::PROPERTY_INDICATE
                     );
   pCharacteristic5->addDescriptor(new BLE2902());
- pCharacteristic5->setCallbacks(new MyNotifyCharacteristic());
-  
-  pCharacteristic6 = pService2->createCharacteristic(
+  pCharacteristic5->setCallbacks(new WriteFileCallbacks());
+
+  pCharacteristic6 = pService->createCharacteristic(
                       CHARACTERISTIC_UUID6,
                       BLECharacteristic::PROPERTY_READ   |
                       BLECharacteristic::PROPERTY_WRITE  |
                       BLECharacteristic::PROPERTY_NOTIFY |
                       BLECharacteristic::PROPERTY_INDICATE
                     );
-  pCharacteristic6->addDescriptor(new BLE2902());
-pCharacteristic6->setCallbacks(new MyNotifyCharacteristic());
+  pCharacteristic6->addDescriptor(new BLE2902());*/
+
   pCharacteristic11 = pService2->createCharacteristic(
                       CHARACTERISTIC_UUID11,
                       BLECharacteristic::PROPERTY_READ   |
@@ -3792,7 +3307,7 @@ pCharacteristic6->setCallbacks(new MyNotifyCharacteristic());
                     );
   // Create a BLE Descriptor
   pCharacteristic11->addDescriptor(new BLE2902());
-pCharacteristic11->setCallbacks(new MyNotifyCharacteristic());
+
   pCharacteristic22 = pService2->createCharacteristic(
                       CHARACTERISTIC_UUID22,
                       BLECharacteristic::PROPERTY_READ   |
@@ -3802,8 +3317,6 @@ pCharacteristic11->setCallbacks(new MyNotifyCharacteristic());
                     );
   // Create a BLE Descriptor
   pCharacteristic22->addDescriptor(new BLE2902());
-pCharacteristic22->setCallbacks(new MyNotifyCharacteristic());
-// notifyCallbacks.setCardCnCharacteristic(pCharacteristic22);
 
   // Start the service
   pService->start();
@@ -3833,9 +3346,7 @@ pCharacteristic22->setCallbacks(new MyNotifyCharacteristic());
   Serial.println(sizeof(readData));
     //sddata.data15=readData;
   // memcpy(&string2, readData, sizeof(readData));
-
-  result2=string1+readData+string3;  //this is for control board i.e esp32 client
-  // result2=readData;  // this is for mobile app
+  result2=string1+readData+string3;
   Serial.print("eeprom read value=");
   Serial.println(result2);
   max_cardcount= EEPROM.read(10); // Read the data from EEPROM
@@ -3874,6 +3385,7 @@ pCharacteristic22->setCallbacks(new MyNotifyCharacteristic());
   Serial.println(mode_set);
 
 }
+// listfiles to mobile app
 String listFiles(String directory) {
   String fileList = "\n";
   File root = SD.open(directory);
@@ -3892,8 +3404,17 @@ String listFiles(String directory) {
   }
   return fileList;
 }
+// end of list files to mobile app
 void loop()
  {
+  if (Serial.available()) {
+    // Read the string until a newline character
+    newcpu_name = Serial.readStringUntil('\n');// Write here new CPU NAME 
+    writeStringToEEPROM(STRING_START_ADDRESS, newcpu_name);
+    // Read back the updated string
+    storedString = readStringFromEEPROM(STRING_START_ADDRESS);
+    Serial.println("Updated EEPROM content: " + storedString);
+  }
    if(sensor1NotDetected == true|| sensor2NotDetected == true)
    {
         Data_passing_clear();
@@ -4056,48 +3577,85 @@ if(rtc_flag==60000)
           pCharacteristic4->setValue((uint8_t*)&result_pcount, sizeof(result_pcount));
           // pCharacteristic4->setValue((uint8_t*)&height_var, 4);
           pCharacteristic4->notify();
-       
-          pCharacteristic2->setValue(result2.c_str());
-          pCharacteristic2->notify();
-           Serial.print("Selected File for Design 3972: ");
-          Serial.println(result2.c_str());
 
-if (pCharacteristic3) {
-           temp_str=".";
-          combinedString = width +temp_str+height;
-          pCharacteristic3->setValue((uint8_t*)&combinedString, sizeof(combinedString));
-        pCharacteristic3->notify();
-        Serial.print("width and height File for Design 3980: ");
+
+          String temp_str = ".";
+          String combinedString = String(width) + temp_str + String(height);  // Create the combined string
+
+          // Send the combined string as raw bytes over BLE
+          pCharacteristic3->setValue((uint8_t*)combinedString.c_str(), combinedString.length());
+          pCharacteristic3->notify();  // Notify the client
+
+          Serial.print("Body width and height: ");
           Serial.println(combinedString.c_str());
-        delay(10);
-    } else {
-        Serial.println("pCharacteristic3 is not initialized!");
-    }
+          delay(10); 
+                 //Lock dateto application//
+String count_date_str = String(lock_date);
+String count_month_str = String(lock_month);
+String count_year_str = String(lock_year);
+// Convert String to C-style string
+const char* count_date_cstr = count_date_str.c_str();
+const char* count_month_cstr = count_month_str.c_str();
+const char* count_year_cstr = count_year_str.c_str();
+String temp_str11="AA/"; // date 
+String temp_str66="A"; // date 
+//String data = sddata.data22;
+combinedString22 =temp_str11+count_date_cstr+ temp_str66+count_month_cstr+temp_str66+count_year_cstr;
+//humidityCharacteristic->writeValue(combinedString33.c_str(), combinedString33.length());
+pCharacteristic22->setValue(combinedString22.c_str());
+pCharacteristic22->notify();
 
-if (pCharacteristic22) {
-          temp_str=".";
-          ttl_hks=max_cardcount*max_connector*8;
-          // total_hook = String(ttl_hks);
-          total_hook = max_cardcount + temp_str + max_connector + temp_str + ttl_hks;
-          pCharacteristic22->setValue((uint8_t*)&total_hook, sizeof(total_hook));
-        pCharacteristic22->notify();
-        Serial.print("card and connector count for Design 3992: ");
-          Serial.println(total_hook.c_str());
-        delay(10);
-    } else {
-        Serial.println("pCharacteristic22 is not initialized!");
-    }
+//file name sending to App//filename_to_app=filename_without_ext_fun;
 
-       }
+String temp_str22="CH/"; // date 
+// combinedString33 =temp_str22+filename_to_app;
+combinedString33 =temp_str22+result2;
+pCharacteristic22->setValue(combinedString33.c_str());
+pCharacteristic22->notify();
 
+String temp_str33="UN/"; // Username  
+combinedString44 =temp_str33+storedString;
+pCharacteristic22->setValue(combinedString44.c_str());
+pCharacteristic22->notify();
+
+  String temp_ls= "LS/";
+  lockString = temp_ls + lockstatus;  
+  pCharacteristic->setValue(lockString.c_str());
+  pCharacteristic->notify();
+
+
+//sending the cardcount+totalhooks//
+          String temp_str44="CTL/";
+          temp_str = ".";
+          ttl_hks = max_cardcount * max_connector * 8;
+          total_hook = temp_str44+max_cardcount + temp_str + max_connector + temp_str + ttl_hks;
+          pCharacteristic22 -> setValue((uint8_t * ) & total_hook, sizeof(total_hook));
+          pCharacteristic22 -> notify();
+          //Serial.print("card and connector count for Design 1717: ");
+         // Serial.println(total_hook.c_str());
+          //sending the Pixel Information(height and width)
+          //  String temp_str55="pxl/";
+          // temp_str = ".";
+          // combinedString55 = temp_str55+width + temp_str + height;
+          // pCharacteristic22 -> setValue((uint8_t * ) & combinedString55, sizeof(combinedString55));
+          // pCharacteristic22 -> notify();
+         // Serial.print("body width and height:");
+          //Serial.println(combinedString55.c_str());
+
+
+
+ }
+  
           	//Serial.println("hello world");
+
+
+          
 
           std::string receivedData  = pCharacteristic2->getValue();// Display reading data file selection 
          
-        // selectedFile = (receivedData.find(".bmp") != std::string::npos) ? receivedData : selectedFile;
-         //  WriteFileCallbacks();
-        //  Serial.print("Selected File in Line: ");
-        //   Serial.println(receivedData.c_str());
+         
+         // Serial.print("Received data: ");
+          //Serial.println(receivedData.c_str());
          
         const char*full_filename =receivedData.c_str();
         char* filename_without_ext = extract_filename_without_extension(full_filename);
@@ -4109,14 +3667,10 @@ if (pCharacteristic22) {
         char* result1 = strstr(filename_without_ext11, filename_without_ext);
         char filename_without_ext22[] = "DL";   // dlete option check 
         char* result22 = strstr(filename_without_ext22, filename_without_ext);
-
         char filename_without_ext33[] = "LR";   // left to right design chnage 
         char* result33 = strstr(filename_without_ext33, filename_without_ext);
-        
-
         char filename_without_ext44[] = "AA";   // left to right design chnage 
         char* result44 = strstr(filename_without_ext44, filename_without_ext);
-
         char filename_without_ext55[] = "MU";   // left to right design chnage 
         char* result55 = strstr(filename_without_ext55, filename_without_ext);
       
@@ -4174,7 +3728,7 @@ if (pCharacteristic22) {
 
            //Serial.print(" ADD File++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++");
                separateString3(receivedData.c_str());
-              
+              filename_to_app=filename_without_ext_fun;
                string2=filename_without_ext_fun;
                String newValue2 = String(string2.c_str());
                //Serial.println(" newvalue2***************************====");
@@ -4252,6 +3806,9 @@ if (pCharacteristic22) {
             EEPROM.commit(); // Commit the data to EEPROM
 
           result2=string1+previousValue+string3;
+          //Serial.println("result22222222222222222222222222222222222222222222");
+          // Serial.println(result2);
+         //readBMPDimensions2(result2.c_str());
 
           if (SD.exists(result2.c_str()))
           {
@@ -4259,17 +3816,15 @@ if (pCharacteristic22) {
            sprintf( result_width, "%d", width); 
            sprintf( result_height, "%d", height); 
           char result_pcount[10]; 
-          if (pCharacteristic3) {
            temp_str=".";
           combinedString = result_width +temp_str+result_height;
           pCharacteristic3->setValue((uint8_t*)&combinedString, sizeof(combinedString));
-        pCharacteristic3->notify();
-        delay(10);
-    } else {
-        Serial.println("pCharacteristic3 is not initialized!");
-    }
-          Serial.println("combinedString==========================="); 
-          Serial.println(combinedString);
+          pCharacteristic3->notify();
+          //Serial.println("combinedString==========================="); 
+          //Serial.println(combinedString);
+
+           //Serial.print("Received data: ");
+          //Serial.println(receivedData.c_str());
                     // height_var=0;
            sensor_sel=0;
            sensor_sel1=0;
@@ -4289,9 +3844,9 @@ if (pCharacteristic22) {
          if (pCharacteristic11 != nullptr) 
         {
           receivedData3  = pCharacteristic11->getValue();// Display reading data file selection
-          // Serial.print("Received data: ");
-          // Serial.println(receivedData3.c_str());
-          //Serial.println(strcmp(comp_string,receivedData3));
+          //Serial.print("Received data: ");
+          ////Serial.println(receivedData3.c_str());
+         // Serial.println(strcmp(comp_string,receivedData3));
            const char* receivedDataCStr = receivedData3.c_str();
           if (strcmp(receivedDataCStr, comp_string5) == 0)
            {
@@ -4488,20 +4043,6 @@ if(left_right_flag==2)
 
 //digitalWrite(EN_Pin, LOW);
 digitalWrite(EN_Pin, HIGH);
-shiftOut2(e16.myVariable1,e16.myVariable2,e16.myVariable3,e16.myVariable4,e16.myVariable5,e16.myVariable6,e16.myVariable7,e16.myVariable8,
-          e16.myVariable9,e16.myVariable10,e16.myVariable11,e16.myVariable12,e16.myVariable13,e16.myVariable14,e16.myVariable15,e16.myVariable16);
-
-shiftOut2(e15.myVariable1,e15.myVariable2,e15.myVariable3,e15.myVariable4,e15.myVariable5,e15.myVariable6,e15.myVariable7,e15.myVariable8,
-          e15.myVariable9,e15.myVariable10,e15.myVariable11,e15.myVariable12,e15.myVariable13,e15.myVariable14,e15.myVariable15,e15.myVariable16); 
-
-
-shiftOut2(e14.myVariable1,e14.myVariable2, e14.myVariable3,e14.myVariable4,e14.myVariable5,e14.myVariable6,e14.myVariable7,e14.myVariable8,
-          e14.myVariable9,e14.myVariable10,e14.myVariable11,e14.myVariable12,e14.myVariable13,e14.myVariable14,e14.myVariable15,e14.myVariable16);
-
-
-shiftOut2(e13.myVariable1,e13.myVariable2,e13.myVariable3,e13.myVariable4,e13.myVariable5,e13.myVariable6,e13.myVariable7,e13.myVariable8,
-          e13.myVariable9,e13.myVariable10,e13.myVariable11,e13.myVariable12,e13.myVariable13,e13.myVariable14,e13.myVariable15,e13.myVariable16);
-
 shiftOut2(e12.myVariable1,e12.myVariable2,e12.myVariable3,e12.myVariable4,e12.myVariable5,e12.myVariable6,e12.myVariable7,e12.myVariable8,
           e12.myVariable9,e12.myVariable10,e12.myVariable11,e12.myVariable12,e12.myVariable13,e12.myVariable14,e12.myVariable15,e12.myVariable16);
 
@@ -4588,19 +4129,6 @@ shiftOut3(e11.myVariable1,e11.myVariable2,e11.myVariable3,e11.myVariable4,e11.my
 
 shiftOut3(e12.myVariable1,e12.myVariable2,e12.myVariable3,e12.myVariable4,e12.myVariable5,e12.myVariable6,e12.myVariable7,e12.myVariable8,
           e12.myVariable9,e12.myVariable10,e12.myVariable11,e12.myVariable12,e12.myVariable13,e12.myVariable14,e12.myVariable15,e12.myVariable16); 	
-
-shiftOut3(e13.myVariable1,e13.myVariable2,e13.myVariable3,e13.myVariable4,e13.myVariable5,e13.myVariable6,e13.myVariable7,e13.myVariable8,
-          e13.myVariable9,e13.myVariable10,e13.myVariable11,e13.myVariable12,e13.myVariable13,e13.myVariable14,e13.myVariable15,e13.myVariable16);
-		  
-shiftOut3(e14.myVariable1,e14.myVariable2, e14.myVariable3,e14.myVariable4,e14.myVariable5,e14.myVariable6,e14.myVariable7,e14.myVariable8,
-          e14.myVariable9,e14.myVariable10,e14.myVariable11,e14.myVariable12,e14.myVariable13,e14.myVariable14,e14.myVariable15,e14.myVariable16);
-
-
-shiftOut3(e15.myVariable1,e15.myVariable2,e15.myVariable3,e15.myVariable4,e15.myVariable5,e15.myVariable6,e15.myVariable7,e15.myVariable8,
-          e15.myVariable9,e15.myVariable10,e15.myVariable11,e15.myVariable12,e15.myVariable13,e15.myVariable14,e15.myVariable15,e15.myVariable16);
-
-shiftOut3(e16.myVariable1,e16.myVariable2,e16.myVariable3,e16.myVariable4,e16.myVariable5,e16.myVariable6,e16.myVariable7,e16.myVariable8,
-          e16.myVariable9,e16.myVariable10,e16.myVariable11,e16.myVariable12,e16.myVariable13,e16.myVariable14,e16.myVariable15,e16.myVariable16); 
 digitalWrite(EN_Pin, LOW);	  
 
 delay(3);
@@ -4622,10 +4150,6 @@ void cleardata(void)
     clearData(&e10);
     clearData(&e11);
     clearData(&e12);
-    clearData(&e13);
-    clearData(&e14);
-    clearData(&e15);
-    clearData(&e16);
 }
 
 void all_up()
@@ -4636,10 +4160,6 @@ void all_up()
 void all_down()
 {
       digitalWrite(EN_Pin, HIGH);
-      shiftOut2(0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF);
-      shiftOut2(0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF);
-      shiftOut2(0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF);
-      shiftOut2(0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF);
       shiftOut2(0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF);
       shiftOut2(0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF);
       shiftOut2(0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF);
@@ -4673,10 +4193,6 @@ void test_8up_8down1()
       shiftOut2(0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF);
       shiftOut2(0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00);
       shiftOut2(0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF);
-      shiftOut2(0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00);
-      shiftOut2(0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF);
-      shiftOut2(0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00);
-      shiftOut2(0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF);
       digitalWrite(EN_Pin, LOW);
       delay(3);
 }
@@ -4686,10 +4202,6 @@ void test_8up_8down2()
 
 
       digitalWrite(EN_Pin, HIGH);
-      shiftOut2(0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF);
-      shiftOut2(0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00);
-      shiftOut2(0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF);
-      shiftOut2(0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00);
       shiftOut2(0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF);
       shiftOut2(0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00);
       shiftOut2(0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF);
@@ -4723,10 +4235,6 @@ void test_1up_1down()
       shiftOut2(0xAA,0xAA,0xAA,0xAA,0xAA,0xAA,0xAA,0xAA,0xAA,0xAA,0xAA,0xAA,0xAA,0xAA,0xAA,0xAA);
       shiftOut2(0xAA,0xAA,0xAA,0xAA,0xAA,0xAA,0xAA,0xAA,0xAA,0xAA,0xAA,0xAA,0xAA,0xAA,0xAA,0xAA);
       shiftOut2(0xAA,0xAA,0xAA,0xAA,0xAA,0xAA,0xAA,0xAA,0xAA,0xAA,0xAA,0xAA,0xAA,0xAA,0xAA,0xAA);
-      shiftOut2(0xAA,0xAA,0xAA,0xAA,0xAA,0xAA,0xAA,0xAA,0xAA,0xAA,0xAA,0xAA,0xAA,0xAA,0xAA,0xAA);
-      shiftOut2(0xAA,0xAA,0xAA,0xAA,0xAA,0xAA,0xAA,0xAA,0xAA,0xAA,0xAA,0xAA,0xAA,0xAA,0xAA,0xAA);
-      shiftOut2(0xAA,0xAA,0xAA,0xAA,0xAA,0xAA,0xAA,0xAA,0xAA,0xAA,0xAA,0xAA,0xAA,0xAA,0xAA,0xAA);
-      shiftOut2(0xAA,0xAA,0xAA,0xAA,0xAA,0xAA,0xAA,0xAA,0xAA,0xAA,0xAA,0xAA,0xAA,0xAA,0xAA,0xAA);
       digitalWrite(EN_Pin, LOW);
      delay(3);
 }
@@ -4734,10 +4242,6 @@ void test_1up_1down()
 void test_1down_1up()
 {
       digitalWrite(EN_Pin, HIGH);
-      shiftOut2(0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55);
-      shiftOut2(0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55);
-      shiftOut2(0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55);
-      shiftOut2(0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55);
       shiftOut2(0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55);
       shiftOut2(0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55);
       shiftOut2(0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55,0x55);
@@ -4769,10 +4273,6 @@ void test_4up_4down()
       shiftOut2(0x0F,0x0F,0x0F,0x0F,0x0F,0x0F,0x0F,0x0F,0x0F,0x0F,0x0F,0x0F,0x0F,0x0F,0x0F,0x0F);
       shiftOut2(0x0F,0x0F,0x0F,0x0F,0x0F,0x0F,0x0F,0x0F,0x0F,0x0F,0x0F,0x0F,0x0F,0x0F,0x0F,0x0F);
       shiftOut2(0x0F,0x0F,0x0F,0x0F,0x0F,0x0F,0x0F,0x0F,0x0F,0x0F,0x0F,0x0F,0x0F,0x0F,0x0F,0x0F);
-      shiftOut2(0x0F,0x0F,0x0F,0x0F,0x0F,0x0F,0x0F,0x0F,0x0F,0x0F,0x0F,0x0F,0x0F,0x0F,0x0F,0x0F);
-      shiftOut2(0x0F,0x0F,0x0F,0x0F,0x0F,0x0F,0x0F,0x0F,0x0F,0x0F,0x0F,0x0F,0x0F,0x0F,0x0F,0x0F);
-      shiftOut2(0x0F,0x0F,0x0F,0x0F,0x0F,0x0F,0x0F,0x0F,0x0F,0x0F,0x0F,0x0F,0x0F,0x0F,0x0F,0x0F);
-      shiftOut2(0x0F,0x0F,0x0F,0x0F,0x0F,0x0F,0x0F,0x0F,0x0F,0x0F,0x0F,0x0F,0x0F,0x0F,0x0F,0x0F);
       delay(3);
 }
 
@@ -4783,10 +4283,6 @@ void test_4down_4up()
       shiftOut2(0x0F,0x0F,0x0F,0x0F,0x0F,0x0F,0x0F,0x0F,0x0F,0x0F,0x0F,0x0F,0x0F,0x0F,0x0F,0x0F);
       shiftOut2(0x0F,0x0F,0x0F,0x0F,0x0F,0x0F,0x0F,0x0F,0x0F,0x0F,0x0F,0x0F,0x0F,0x0F,0x0F,0x0F);
       shiftOut2(0x0F,0x0F,0x0F,0x0F,0x0F,0x0F,0x0F,0x0F,0x0F,0x0F,0x0F,0x0F,0x0F,0x0F,0x0F,0x0F);
-      shiftOut2(0xF0,0xF0,0xF0,0xF0,0xF0,0xF0,0xF0,0xF0,0xF0,0xF0,0xF0,0xF0,0xF0,0xF0,0xF0,0xF0);
-      shiftOut2(0xF0,0xF0,0xF0,0xF0,0xF0,0xF0,0xF0,0xF0,0xF0,0xF0,0xF0,0xF0,0xF0,0xF0,0xF0,0xF0);
-      shiftOut2(0xF0,0xF0,0xF0,0xF0,0xF0,0xF0,0xF0,0xF0,0xF0,0xF0,0xF0,0xF0,0xF0,0xF0,0xF0,0xF0);
-      shiftOut2(0xF0,0xF0,0xF0,0xF0,0xF0,0xF0,0xF0,0xF0,0xF0,0xF0,0xF0,0xF0,0xF0,0xF0,0xF0,0xF0);
       shiftOut2(0xF0,0xF0,0xF0,0xF0,0xF0,0xF0,0xF0,0xF0,0xF0,0xF0,0xF0,0xF0,0xF0,0xF0,0xF0,0xF0);
       shiftOut2(0xF0,0xF0,0xF0,0xF0,0xF0,0xF0,0xF0,0xF0,0xF0,0xF0,0xF0,0xF0,0xF0,0xF0,0xF0,0xF0);
       shiftOut2(0xF0,0xF0,0xF0,0xF0,0xF0,0xF0,0xF0,0xF0,0xF0,0xF0,0xF0,0xF0,0xF0,0xF0,0xF0,0xF0);
@@ -4902,6 +4398,7 @@ if(sensor1Detected && sensor_sel==0 )
     sensor_sel=1;
     temp_sens_check=1;
     cleardata();
+     
     //Serial.print("pret111111111111111111111111111111111111111=");
     Serial.println(prev);
     //Serial.print("mem_cpy_set=");
@@ -5024,7 +4521,6 @@ else if(sensor2Detected &&sensor_sel1==1)//else if(digitalRead(sen2) == LOW&&sen
     prev=prev-(temp_flag*2);  // prev=prev-(4608*2); 
     Serial.println(prev);
     readBMPDimensions(result2.c_str());
-
         //Serial.print("mem_cpy_set14=");
     //Serial.println(mem_cpy_set);
     mem_cpy_set=1;
@@ -5039,7 +4535,9 @@ else
 {
   if(lockstatus_count==0)
   {
-  pCharacteristic->setValue(lockstatus.c_str());
+  String temp_ls= "LS/";
+  lockString = temp_ls + lockstatus;  
+  pCharacteristic->setValue(lockString.c_str());
   pCharacteristic->notify();
   unlockstatus_count=0;
   }

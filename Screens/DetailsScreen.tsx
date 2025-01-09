@@ -1,11 +1,20 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, Button, Modal, StyleSheet, Alert, ToastAndroid } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
-
+import { useTranslation } from 'react-i18next'; // Hook to access translation
+import '../services/i18n';
+import i18next from "i18next";
 const DetailsScreen = ({ navigation }) => {
+  const { t, i18n } = useTranslation();
   const [modalVisible, setModalVisible] = useState(false);
   const [inputText, setInputText] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
+   
+  useEffect(() => {
+      // Ensure re-render when language changes
+      console.log('Current language:', i18n.language);
+    }, [i18n.language]);
+  
   useEffect(() => {
     // Show the overlay when the component mounts
     setModalVisible(true);
@@ -31,7 +40,7 @@ const DetailsScreen = ({ navigation }) => {
       setModalVisible(false); // Close the modal if the input is correct
       setErrorMessage(''); // Clear any error message
       setInputText(''); // Clear the input
-      ToastAndroid.show("login Successful!", ToastAndroid.SHORT);
+      ToastAndroid.show(i18next.t('login Successful!'), ToastAndroid.SHORT);
     } else {
       setErrorMessage('Invalid password. Please try again.'); // Show error message
       console.log('Invalid password. Please try again.'); // Show error message
@@ -71,6 +80,7 @@ const DetailsScreen = ({ navigation }) => {
     
     
     <View style={styles.container}>
+      <View><Text>{t('Details')}</Text></View>
       <View style={styles.header}>
         <Text style={styles.headerText}>Client Name:</Text>
         <Text style={styles.headerText}>SreeTextiles</Text>

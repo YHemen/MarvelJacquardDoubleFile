@@ -1,8 +1,13 @@
 import React, { useState, useEffect } from "react";
-import {Modal, SafeAreaView, setNumber,Button, View, Text,LayoutAnimation, StyleSheet, TextInput, TouchableOpacity, ToastAndroid} from 'react-native';
+import {Modal, Image, SafeAreaView, View, Text,LayoutAnimation, StyleSheet, TextInput, TouchableOpacity, BackHandler, ToastAndroid, Alert} from 'react-native';
 import Icon from 'react-native-vector-icons/FontAwesome';
 import { useMyContext } from '../Components/MyContext';
 import { useFocusEffect } from '@react-navigation/native';
+import { useTranslation } from 'react-i18next'; // Hook to access translation
+import '../services/i18n';
+import i18next from "i18next";
+import axios from 'axios';
+import qs from 'qs';
 const SettingsScreen:React.FC<{navigation: any}> = ({navigation}) => {
     // const HomeScreen: React.FC = ({ navigation }) => {
     const {
@@ -11,6 +16,7 @@ const SettingsScreen:React.FC<{navigation: any}> = ({navigation}) => {
       isConnected,
       readLockStatus,
       lockStatus,
+      setLockStatus,
       cnCount,
       setCnCount,
       cardCount,
@@ -22,6 +28,15 @@ const SettingsScreen:React.FC<{navigation: any}> = ({navigation}) => {
     setDesignDir,
     leftRightSelect,
     prevFile,
+    webData,
+    setLockDate,
+    writeUserNameToDevice,
+    custName,
+    setCustName,
+    custPwd,
+    setCustPwd,
+    lockedDate, 
+    setLockedDate,
     } = useMyContext();
     const onColor = 'green';
   const offColor = 'red';
@@ -33,26 +48,62 @@ const SettingsScreen:React.FC<{navigation: any}> = ({navigation}) => {
   const [modalVisible, setModalVisible] = useState(false);
   const [inputText, setInputText] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
+  const [data, setData] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [days, setDays] = useState('');
+  const [months, setMonths] = useState('');
+  const [years, setYears] = useState('');
+  // const [yearLeft, setYearsLeft] = useState('');
+  // const [monthLeft, setMonthsLeft] = useState('');
+  // const [dayLeft, setDaysLeft] = useState('');
+  // const [formattedDate, setFormattedDate] = useState('');
+  // const [cpuName, setCpuName] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
   const initialValue = 8;
-const finalValue = 22;
+  const finalValue = 22;
+  const { day, month, year } = lockedDate;
+  const { t, i18n } = useTranslation();
+// Find the user with id: "2" (string comparison)
+// const user = webData.find(item => item.usr_id === "2");  // Use string comparison for usr_id
 
+// If user with id: "2" exists, display their password, else display an error message
+// const userPassword = user ? user.usr_pwd : 'User not found';
+  useEffect(() => {
+        // Ensure re-render when language changes
+        console.log('Current language:', i18n.language);
+      }, [i18n.language]);
 useEffect(() => {
   // Show the overlay when the component mounts
   setModalVisible(true);
 }, []);
 
-const correctPassword = 'mySecret'; // Define your authentication value here
+// const correctPassword = userPassword; // Define your authentication value here
+const correctPassword = '142434'; // Define your authentication value here
 useFocusEffect(
   React.useCallback(() => {
-    setModalVisible(true); // Show the modal whenever the screen is focused
-    setInputText('');
+    // Show the modal whenever the screen is focused
+    setModalVisible(true);
+    
+    // Add back press handler
+    const backHandler = BackHandler.addEventListener('hardwareBackPress', handleBackPress);
+
+    // Cleanup back press handler when component loses focus
+    return () => backHandler.remove();
   }, [])
 );
+// useEffect(() => {
+//   console.log("Locked Date:", lockedDate);  // Check values in console
+// }, [lockedDate]);
+
+const handleUnLockStatus = () => {
+  unLockMachine();
+};
 const handleBackPress = () => {
   if (modalVisible) {
     setModalVisible(false); // Optional: Close the modal before navigating
     setInputText('');
-    navigation.navigate('Home'); // Navigate to the Home screen
+    navigation.goBack(); // Navigate to the Home screen
     return true; // Prevent closing the modal
   }
   return false; // Allow closing if the modal is not visible
@@ -75,49 +126,36 @@ const handleSubmit = () => {
   }
 };
 
+const handleInputCard = (value) => {
+  const numValue = value.replace(/[^0-9]/g,'');
+   // Update the state with the new input
+  setCardCount(numValue);
+
+};
+const handleInputConnector = (value) => {
+  const numValue = value.replace(/[^0-9]/g,'');
+  setCnCount(numValue); // Update the state with the new input
+  
+
+};
+
+
 const handleIncrement = () => {
-    // Find the next number in the sequence
-    if (cardCount < finalValue) {
-        let nextValue;
-
-        if (cardCount === 0) {
-          nextValue = 8;
-      }
-       else if (cardCount === 8) {
-            nextValue = 12;
-        } else if (cardCount === 12) {
-            nextValue = 16;
-        } else if (cardCount === 16) {
-            nextValue = 18;
-        } else if (cardCount === 18) {
-            nextValue = 22;
-        }
-
-        if (nextValue) {
-            setCardCount(nextValue); // Update cardCount directly
-        }
+  setCardCount(prevCardCount => {
+    if (prevCardCount < 16) {
+        return prevCardCount + 1; // Increment if less than 16
     }
+    return prevCardCount; // Return the same value if already 16
+});
 };
 
 const handleDecrement = () => {
-    // Find the previous number in the sequence
-    let prevValue;
-
-    if (cardCount === 22) {
-        prevValue = 18;
-    } else if (cardCount === 18) {
-        prevValue = 16;
-    } else if (cardCount === 16) {
-        prevValue = 12;
-    } else if (cardCount === 12) {
-        prevValue = 8;
-    } else if (cardCount === 8) {
-      prevValue = 0;
-  }
-
-    if (prevValue) {
-        setCardCount(prevValue); // Update cardCount directly
+  setCardCount(prevCardCount => {
+    if (prevCardCount >=0 ) {
+        return prevCardCount - 1; // Increment if less than 16
     }
+    return prevCardCount; // Return the same value if already 16
+});
 }
 
   const handleConnectorIncrement = () => {
@@ -131,14 +169,14 @@ const handleDecrement = () => {
 
   const handleConnectorDecrement = () => {
     setCnCount(prevCnCount => {
-      if (prevCnCount > 1) {
+      if (prevCnCount > 0) {
           return prevCnCount - 1; // Increment if less than 16
       }
       return prevCnCount; // Return the same value if already 16
   });
   };
   
-  const submitCardConCount = () => {
+    const submitCardConCount = () => {
     const temp_str = '/';
     const cardCount_string = String(cardCount);
     const cnCount_string = String(cnCount);
@@ -156,44 +194,173 @@ const handleDecrement = () => {
         leftRightSelect(lrstringvalue);
         setDesignDir(lrstringvalue);
   };
-  const [day, setDay] = useState('');
-  const [month, setMonth] = useState('');
-  const [year, setYear] = useState('');
-  const [formattedDate, setFormattedDate] = useState('');
   const handleDateSubmit = () => {
-    const date = new Date(`${year}-${month}-${day}`);
+    const yvalue = years;
+    const mvalue = months;
+    const dvalue = days;
+    setLockDate(dvalue,mvalue,yvalue);
+  }
+
+  const lockStatusDisp = (lsvalue) => {
+    const lstringvalue = String(lsvalue);
+    console.log("state is ", lstringvalue);
+    setLockStatus(lstringvalue);
+    // setLockMachine(lstringvalue);
+  }
+  
+//   const handleDateSubmit = () => {
+//     const lockDate = new Date(`${year}-${month}-${day}`);
+//     const currentDate = new Date();
+
+//     if (lockDate <= currentDate) {
+//         alert("The lock date must be a future date.");
+//         return;
+//     }
+
+//     let yearsLeft = lockDate.getFullYear() - currentDate.getFullYear();
+//     let monthsLeft = lockDate.getMonth() - currentDate.getMonth();
+//     let daysLeft = lockDate.getDate() - currentDate.getDate();
+
+//     // Adjust months and years if the month difference is negative
+//     if (monthsLeft < 0) {
+//         yearsLeft--;
+//         monthsLeft += 12; // Adjust months to be positive
+//     }
+
+//     // Adjust days and months if the day difference is negative
+//     if (daysLeft < 0) {
+//         // Adjust the month and calculate the last day of the previous month
+//         monthsLeft--;
+//         const lastMonth = new Date(currentDate.getFullYear(), currentDate.getMonth(), 0);
+//         daysLeft += lastMonth.getDate(); // Get the last day of the previous month
+
+//         // If monthsLeft goes negative, adjust the years and months
+//         if (monthsLeft < 0) {
+//             yearsLeft--;
+//             monthsLeft += 12;
+//         }
+//     }
+//     setYearsLeft(yearsLeft);
+//     setMonthsLeft(monthsLeft);
+//     setDaysLeft(daysLeft);
+//     // Logging for debugging
+//     console.log("Current Date:", currentDate);
+//     console.log("Lock Date:", lockDate);
+//     console.log("Years Left:", yearsLeft);
+//     console.log("Months Left:", monthsLeft);
+//     console.log("Days Left:", daysLeft);
+//     lockUnLockSelect(yearLeft,monthLeft,dayLeft);
+//     if (!isNaN(lockDate)) {
+//         const formattedLockDate = lockDate.toLocaleDateString(); // Format the lock date
+//         setFormattedDate(formattedLockDate);
+//         console.log("Formatted Lock Date:", formattedLockDate);
+//     } else {
+//         alert(i18next.t('Invalid password. Please try again'));
+//     }
+// };
+
+
+  
+  // const changeCustName = async () =>{
+  //   if (!custName) {
+  //     ToastAndroid.show("Please enter a customer name", ToastAndroid.SHORT);
+  //     return;
+  //   }
+  //     setIsLoading(true);
+  
+  //   // try {
+  //   //   // Replace with the ESP32's IP address
+  //   //   const response = await axios.post('http://192.168.4.1/updateuser', {
+  //   //     cpu_name: custName, // Send the new customer name in the request body
+  //   //   });
+  //   const encoder = new TextEncoder();
+  //   const byteArray = encoder.encode(custName);
+
+  //   const response = await axios.post('http://192.168.4.1/updateuser', byteArray, {
+  //     headers: {
+  //       'Content-Type': 'application/octet-stream', // Tell the server it's a byte stream
+  //     },
+  //   });
+                
+  //     // Handle success response
+  //     console.log('Customer Name Updated:', response.data);
+  //     ToastAndroid.show("Customer Name changed Succesfully!", ToastAndroid.SHORT);
+  //   } catch (error) {
+  //     // Handle error
+  //     console.log("Customer Name", custName);
+  //     console.error('Error updating CPU name:', error);
+  //     // Alert.alert('Error', 'Failed to update CPU name');
+  //     ToastAndroid.show("Failed to update CPU name..", ToastAndroid.SHORT);
+  //   } finally {
+  //     setIsLoading(false);
+  //   }
     
-    if (!isNaN(date)) {
-        const formatted = date.toLocaleDateString(); // Format the date
-        setFormattedDate(formatted); 
-    } else {
-      alert('Invalid date. Please check your inputs.');
+  // }
+  const changeCustName = async () => {
+    if (!custName) {
+      ToastAndroid.show("Please enter a customer name", ToastAndroid.SHORT);
+      return;
+    }
+  
+    setIsLoading(true);
+  
+    try {
+      const data = qs.stringify({
+        cpu_name: custName, // Send the new customer name in the request body
+      });
+      console.log(data);
+      const response = await axios.post('http://192.168.4.1/updateuser', data, {
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded', // Tell the server it's a byte stream
+        },
+      });
+  
+      console.log('File uploaded:', response.data);
+      ToastAndroid.show("Customer Name changed Succesfully!", ToastAndroid.SHORT);
+    } catch (error) {
+    
+      console.error('Error updating CPU name:', error);
+      ToastAndroid.show("Failed to update CPU name..", ToastAndroid.SHORT);
+    } finally {
+      setIsLoading(false);
     }
   };
-  const changeCustName =() =>{
-    ToastAndroid.show("Customer Name changed!", ToastAndroid.SHORT);
-  }
+  
+  const handleNameChange = (value) => {
+    setCustName(value); // Update the state with the new input
+ };
+
     return(
         <SafeAreaView style={styles.container}>
-            <View><Text style={{fontSize:20}}>User Settings</Text></View>
+            <View><Text style={{fontSize:20}}>{t('User Settings')}</Text></View>
             <View style={{flexDirection: "row", marginBottom:10}} >
                 
             <View style={styles.inputContainer}>
         <TextInput
           style={{width:120}}
-          placeholder="Customer Name"
-        />
+          // value={custName}
+          onChangeText={handleNameChange}
+          placeholder={t('User Name')}
+        >
+          {''}
+          {custName}
+        </TextInput>
         <Icon name="user" size={20} color="#812892" style={styles.icon} />
       </View>
       <View style={styles.inputContainer}>
         <TextInput
-          style={{width:120}}
-          placeholder="Password"
-        />
+          style={{width:120,borderColor: 'gray'}}
+          // onChangeText={handlePwdChange}
+          placeholder={t('Enter Password')}
+          editable={false}
+        >
+          {''}
+          {custPwd}
+        </TextInput>
         <Icon name="lock" size={20} color="#812892" style={styles.icon} />
       </View>
 
-      <TouchableOpacity onPress={changeCustName} style={{alignItems: 'center',justifyContent: 'space-evenly', paddingHorizontal: 10, backgroundColor:'#812892',width: 40,
+      <TouchableOpacity onPress={changeCustName} disabled={isLoading} style={{alignItems: 'center',justifyContent: 'space-evenly', paddingHorizontal: 10, backgroundColor:'#812892',width: 40,
             height: 40,
             borderRadius: 5,
             borderColor: 'purple',
@@ -208,16 +375,20 @@ const handleDecrement = () => {
       </View>
        
       </TouchableOpacity></View>
-      <View><Text style={{fontSize:20}}>Hook Settings</Text></View>
+      <View><Text style={{fontSize:20}}>{t('Total Hooks')}</Text></View>
         <View style={{ flexDirection:'row',flex: 1, alignItems: 'center', justifyContent: 'space-evenly', paddingHorizontal: 10 }}>
-        <Text style={{ textAlign: 'left', marginRight: 10 }}>Card Count     :</Text>
+        <Text style={{ textAlign: 'left', marginRight: 10 }}>{t('Cards Count')}     :</Text>
       <TouchableOpacity onPress={handleDecrement}>
         <Icon name="chevron-down" size={30} color="#812892" />
       </TouchableOpacity>
       <TextInput
-            keyboardType="number-pad"style={{ width: 50, borderRadius: 5, fontSize: 24, 
-fontWeight: 'bold', color: '#812892', textAlign: 'center', 
-marginHorizontal: 10 }}>
+            keyboardType="number-pad"
+             onChangeText={handleInputCard}
+            placeholder='Input Number'
+            style={{ width: 50, borderRadius: 5, fontSize: 24, 
+              fontWeight: 'bold', color: '#812892', textAlign: 'center', 
+              marginHorizontal: 10 }}>
+
             {' '}
             {cardCount}
           </TextInput>
@@ -230,15 +401,18 @@ marginHorizontal: 10 }}>
     
       
       <View style={{ flexDirection:'row',flex: 1, alignItems: 'center', justifyContent: 'space-around' }}>
-      <Text>Connector Count: </Text>
+      <Text>{t('Connector Count')}: </Text>
         <TouchableOpacity onPress={handleConnectorDecrement} >
         <Icon name="chevron-down" size={30} color="#812892" /> 
         </TouchableOpacity>
         {/* <TextInput keyboardType="number-pad" style={{ width:50, borderRadius:5, fontSize: 24, fontWeight:'bold', color: 'steelblue'}}> {incrementCount.toString()}</TextInput> */}
         <TextInput
-            keyboardType="number-pad"style={{ width: 50, borderRadius: 5, fontSize: 24, 
-fontWeight: 'bold', color: '#812892', textAlign: 'center', 
-marginHorizontal: 10 }}>
+            keyboardType="number-pad"
+            onChangeText={handleInputConnector}
+            placeholder='Input Number'
+            style={{ width: 50, borderRadius: 5, fontSize: 24, 
+            fontWeight: 'bold', color: '#812892', textAlign: 'center', 
+            marginHorizontal: 10 }}>
             {' '}
             {cnCount}
           </TextInput>
@@ -251,24 +425,24 @@ marginHorizontal: 10 }}>
         
     </View>
     <View style={{ flexDirection:'row',flex: 1, justifyContent: 'space-around', alignItems: 'center', marginBottom:10}}>
-        <Text>TOTAL HOOKS:</Text>
+        <Text>{t('Total Hooks')}:</Text>
         <Text>{ttlHook}</Text>
         <TouchableOpacity onPress={submitCardConCount} style={{backgroundColor:'purple', width: 50, height: 40, borderRadius:5,justifyContent:'space-around', alignItems:'center', marginRight: 1, marginLeft: 30}} >
         {/* <Icon name="chevron-up" size={30} color="#812892" />  */}
-        <Text style={{color:'white'}}>Save</Text>
+        <Text style={{color:'white'}}>{t('Save')}</Text>
         </TouchableOpacity>
     </View>
     
-    <View><Text style={{fontSize:20}}>Design Left and Right</Text></View>
+    <View><Text style={{fontSize:20}}>{t('Design Left Right')}</Text></View>
         <View style={{ flexDirection:'row',flex: 1, alignItems: 'center', justifyContent: 'space-around' }}>
         <View>
         <TouchableOpacity style={{height: 40, width: 150, borderRadius: 15, borderWidth: 1,overflow: 'hidden',padding:1, borderColor: isOn?onColor:offColor}} onPress={()=>{LayoutAnimation.easeInEaseOut();setIsOn(!isOn); lrMsg(isOn ? 1 : 2);}}>
-                <View style={{borderRadius: 15,alignItem:'center',justifyContent: 'center',height: '100%', width: '50%', backgroundColor:isOn?onColor:offColor, alignSelf: isOn?'flex-end':'flex-start'}}><Text style={{alignItem:'center',justifyContent:'center',color:'white',fontSize:12, fontWeight:'800',fontStyle:'normal'}}>{isOn?'LEFT-RIGHT':'RIGHT-LEFT'}</Text></View>
+                <View style={{borderRadius: 15,alignItem:'center',justifyContent: 'center',height: '100%', width: '50%', backgroundColor:isOn?onColor:offColor, alignSelf: isOn?'flex-end':'flex-start'}}><Text style={{alignItem:'center',justifyContent:'center',color:'white',fontSize:12, fontWeight:'800',fontStyle:'normal'}}>{isOn?i18next.t('left-right'):i18next.t('right-left')}</Text></View>
                 </TouchableOpacity>
     </View>
     </View>
 
-    <View><Text style={{fontSize:20, marginBottom:20}}>Set Running Lock Date</Text></View>
+    <View><Text style={{fontSize:20, marginBottom:20}}>{t('set Running Lock Date')}</Text></View>
     <View style={styles.container}>
       <View style={styles.inputRow}>
         <TextInput
@@ -276,42 +450,60 @@ marginHorizontal: 10 }}>
           keyboardType="numeric"
           placeholder="DD"
           maxLength={2}
-          value={day}
-          onChangeText={setDay}
-        />
+          // value={day}
+          onChangeText={setDays}
+        >{' '}
+        {day}
+      </TextInput>
         <TextInput
           style={styles.input}
           keyboardType="numeric"
           placeholder="MM"
           maxLength={2}
-          value={month}
-          onChangeText={setMonth}
-        />
+          // value={month}
+          onChangeText={setMonths}
+        >{' '}
+        {month}
+      </TextInput>
         <TextInput
           style={styles.input}
           keyboardType="numeric"
-          placeholder="YYYY"
+          placeholder="YY"
           maxLength={4}
-          value={year}
-          onChangeText={setYear}
-        />
+          // value={year}
+          onChangeText={setYears}
+        >{' '}
+        {year}
+      </TextInput>
         <TouchableOpacity onPress={handleDateSubmit} style={{backgroundColor:'purple', width: 80, height: 40, borderRadius:5,justifyContent:'space-around', alignItems:'center', marginRight: 1, marginLeft: 20}} >
         {/* <Icon name="chevron-up" size={30} color="#812892" />  */}
-        <Text style={{color:'white'}}>Submit</Text>
+        <Text style={{color:'white'}}>{t('Submit')}</Text>
         </TouchableOpacity>
       </View>
       
     </View>
-        <View style={{ flexDirection:'row',flex: 1, alignItems: 'center', justifyContent: 'space-around'}}>
-         <Text style={{marginRight: 10,justifyContent:'center',alignItems:'center', fontSize:20}}>Lock Date:</Text> 
+        {/* <View style={{ flexDirection:'row',flex: 1, alignItems: 'center', justifyContent: 'space-around'}}>
+         <Text style={{marginRight: 10,justifyContent:'center',alignItems:'center', fontSize:20}}>{t('Lock Date')}:</Text> 
     <Text style={{justifyContent:'center',alignItems:'center', fontSize:20}}>{formattedDate.toString()}</Text>
+    </View> */}
+    <View style={{ flexDirection:'row',flex: 1, alignItems: 'center', justifyContent: 'space-around'}}>
+         <Text style={{marginRight: 10,justifyContent:'center',alignItems:'center', fontSize:20}}>{t('Count Down')}:</Text> 
+    {/* <Text style={{justifyContent:'center',alignItems:'center', fontSize:20}}>{year?.toString()}:Y{month?.toString()}:M{day?.toString()}:D</Text> */}
+        <Text style={{justifyContent:'center',alignItems:'center', fontSize:20}}>
+        
+        {day !== 0 ? day?.toString() : "0"}-{" "}
+        {month !== 0 ? month?.toString() : "0"}-{" "}
+        {year !== 0 ? year?.toString() : "0"}{" "}
+      </Text>
     </View>
     <View style={styles.container} >
-    
+    <TouchableOpacity onPress={handleUnLockStatus} style={styles.btn}>
+          <Text style={{color: '#FFF'}}>{t('UnLock')}</Text>
+        </TouchableOpacity>
      
     </View>
     <View>
-        <TouchableOpacity style={{height: 40, width: 120, borderRadius: 25, borderWidth: 1,overflow: 'hidden',padding:1, borderColor: isLockOn?onColor:offColor}} onPress={()=>{LayoutAnimation.easeInEaseOut();setIsLockOn(!isLockOn);}}>
+        <TouchableOpacity style={{height: 40, width: 120, borderRadius: 25, borderWidth: 1,overflow: 'hidden',padding:1, borderColor: isLockOn?onColor:offColor}} onPress={()=>{LayoutAnimation.easeInEaseOut();setIsLockOn(!isLockOn); lockStatusDisp(isLockOn ? 1 : 0);}}>
                 <View style={{borderRadius: 25,alignItem:'center',justifyContent: 'center',height: '100%', width: '50%', backgroundColor:isLockOn?onColor:offColor, alignSelf: isLockOn?'flex-end':'flex-start'}}>
                     <Text style={{alignItem:'center',justifyContent:'center',color:'white',fontSize:12, fontWeight:'800',fontStyle:'normal',marginLeft: 16}}>{isLockOn?<Icon name="lock" size={30} color="#ffffff" />:<Icon name="unlock" size={30} color="#ffffff" />}</Text>
                 </View>
@@ -364,11 +556,11 @@ const styles = StyleSheet.create({
       },
       input: {
         height: 40,
-        width: 60, // Adjust width as needed
+        width: 70, // Adjust width as needed
         borderColor: '#ccc',
         borderWidth: 1,
         borderRadius: 5,
-        paddingHorizontal: 5,
+        paddingHorizontal: 0,
         marginHorizontal: 2, // Space between inputs
         textAlign: 'center',
       },
@@ -412,7 +604,7 @@ const styles = StyleSheet.create({
       }, 
       overlay: {
         flex: 1,
-        backgroundColor: 'rgba(0, 0, 0, 0.5)', // Transparent background
+        backgroundColor: 'rgba(255, 204, 229, 1.8)', // Transparent background
         justifyContent: 'center',
         alignItems: 'center',
       },
