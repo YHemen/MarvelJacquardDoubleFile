@@ -6,7 +6,7 @@ import {
   Dimensions,
   TouchableOpacity,
 } from 'react-native';
-import Icon from 'react-native-vector-icons/FontAwesome';
+
 import {useMyContext} from '../Components/MyContext';
 import { useTranslation } from 'react-i18next'; // Hook to access translation
 import '../services/i18n';

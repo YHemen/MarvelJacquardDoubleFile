@@ -90,10 +90,13 @@ export const MyContextProvider: React.FC<{children: ReactNode}> = ({
   const [lockStatus,setLockStatus] = useState('');
   const [custName, setCustName] = useState('');
   const [custPwd, setCustPwd] = useState('');
-  const [webData, setWebData] = useState([]);
+  const [webData, setWebData] = useState<Array<{ usr_id: string, usr_name: string, usr_pwd: string }>>([]);
+ 
   const [webDataLocal, setWebDataLocal] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [localNamed, setLocalNamed] = useState<string | null>(null);
+
   const BleManagerModule = NativeModules.BleManager;
   const BleManagerEmitter = new NativeEventEmitter(BleManagerModule);
   
@@ -261,7 +264,10 @@ export const MyContextProvider: React.FC<{children: ReactNode}> = ({
         const caracidValue = bytesToString(value);
         if(caracidValue.startsWith('RPM.'))
         {
-         setrpmValue(caracidValue);
+          const rpmParts = caracidValue.split('.'); // Splits "RPM.0" into ["RPM", "0"]
+          const rpmNumber = rpmParts[1];  // Access the second part (i.e., the "0" part)
+          console.log('RPM Number:', rpmNumber);
+         setrpmValue(rpmNumber);
          console.log('rpmValue',caracidValue); 
         }
         if (caracidValue.endsWith('.bmp')) 
@@ -322,12 +328,12 @@ export const MyContextProvider: React.FC<{children: ReactNode}> = ({
                                                             console.log('caracid8:', PreviousFile);
                                                             setPrevFile(PreviousFile);
                                                         }
-                                                        if (caracid8Value.startsWith('UN/')) 
-                                                        {
-                                                            const UserName = caracid8Value.substring(3);
-                                                            console.log('caracid8:', UserName);
-                                                            setCustName(UserName);
-                                                        }
+                                                        // if (caracid8Value.startsWith('UN/')) 
+                                                        // {
+                                                        //     const UserName = caracid8Value.substring(3);
+                                                        //     console.log('caracid8:', UserName);
+                                                        //     setCustName(UserName);
+                                                        // }
                                                         if (caracid8Value.startsWith('AA/')) 
                                                         {
                                                         const dimensions = caracid8Value.substring(3).split('A');
@@ -346,7 +352,7 @@ export const MyContextProvider: React.FC<{children: ReactNode}> = ({
                                                                     console.log('Invalid format: Expected 3 components (day, month, year).');
                                                                     }
                                                         }
-                                                        if (caracid8Value.startsWith('CTL/')) 
+                                                        if (caracid8Value.trim().startsWith('CTL/')) 
                                                         {
                                                             const dimensions = caracid8Value.trim().substring(4).split('.'); // Use substring(4) to remove 'CTL/'
                                                             console.log("After removing 'CTL/' and splitting by dot:", dimensions);
@@ -404,8 +410,14 @@ export const MyContextProvider: React.FC<{children: ReactNode}> = ({
   const filteredDevices = result.filter((item: any) => item.name && (item.name.startsWith('Mj') || item.name.startsWith('Marvel')));
         setDevice(filteredDevices);
         console.log('Filtered Devices from HandleConnection', filteredDevices);
+        filteredDevices.forEach(bleDevice => {
+          console.log('Local Name of the Device:', bleDevice.advertising?.localName);
+          setLocalNamed(bleDevice.advertising?.localName)
+          fetchData(bleDevice.advertising?.localName);
+          
+      });
       }
-  
+   
       // Success code
       console.log('Discovered peripherals: ' + result);
     });
@@ -441,14 +453,8 @@ export const MyContextProvider: React.FC<{children: ReactNode}> = ({
   const renderItem = ({item}: any) => {
     return (
       <>
-      {/* <View style={styles.container}> */}
-      <ScrollView
-  style={styles.scrollView} // Apply flex: 1 to the ScrollView itself
-  contentContainerStyle={styles.container} // Apply your content layout style here
-  refreshControl={
-    <RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} />
-  }
->
+      <View style={styles.container}>
+     
 <View style={styles.bleCard}>
           <Text style={styles.txt}>{item.name}</Text>
           {/* <Text style={styles.txt}>{isConnected}</Text> */}
@@ -468,8 +474,8 @@ export const MyContextProvider: React.FC<{children: ReactNode}> = ({
 </Text>
           </TouchableOpacity>
         </View>
-        </ScrollView>
-        {/* </View> */}
+        
+        </View>
       </>
     );
   };
@@ -486,7 +492,17 @@ export const MyContextProvider: React.FC<{children: ReactNode}> = ({
       await discoverServices(item.id);
       console.log('Successfully retrieved services for', item.id);
       console.log('result of services ', result);
-      //  navigation.navigate('Home');
+
+      // Fetch the local name from the result variable
+    const devicenameis = result.advertising.localName;
+    if (devicenameis) {
+      console.log('Device Local Name: ', devicenameis);
+      // setLocalNamed(devicenameis); // Set the local name in your state variable
+      // fetchData(devicenameis);
+    } else {
+      console.log('Local Name not found');
+    }
+
     } catch (error) {
       console.log('onConnect Error..:', error);
     }
@@ -788,35 +804,85 @@ const unLockMachine = async () => {
 };
 
 // Fetch data on initial render
-  
-useEffect(() => {
-  const fetchData = async () => {
+   // Function to fetch data from API using localName
+  //  useEffect(() => {
+   const fetchData = async (localName: string) => {
+    const source = axios.CancelToken.source();
     try {
-      console.log('Fetching data...');
-      const response = await axios.get('http://redsap.org/api.php'); // API call
+      console.log('Fetching data for localName:', localName);
+      setLoading(true);
+       // Set a timeout to limit the wait time for the API call
+       const timeoutId = setTimeout(() => {
+        source.cancel('Request timed out'); // Cancel the request after the timeout
+      }, 5000); // Timeout after 5 seconds (5000 ms)
+      // Pass the localName as a query parameter
+      const response = await axios.get('http://redsap.org/apis.php', {
+        params: { localName }, // Add localName to the request params
+        cancelToken: source.token,
+      });
+      clearTimeout(timeoutId);
+      // const response = await fetch(`http://redsap.org/apis.php?name=${localName}`);
       console.log('Fetched data:', response.data);  // Log the fetched data to check its structure
-      
+      setWebData(response.data);  // Update context with fetched data
+      setWebDataLocal(response.data);
       if (!response.data) {
         throw new Error('No data received');
       }
 
-      setWebData(response.data);  // Update context with fetched data
-      setWebDataLocal(response.data);  // Local state update
-
+      // setWebData(response.data);  // Update context with fetched data
+      // setWebDataLocal(response.data);
+      
     } catch (err) {
+      if (axios.isCancel(err)) {
+        console.log('Request cancelled due to timeout');
+      } else {
       console.error('Error occurred:', err);  // Log error for debugging
       setError(err.message);
       setTimeout(() => {
-        Alert.alert('Error', `No Internet Connection Something went wrong: ${err.message}`);  // Display error alert
+        Alert.alert('Error', `Something went wrong: ${err.message}`);  // Display error alert
       }, 100); // Delay of 100ms
+    } 
     } finally {
       setLoading(false);
     }
   };
+  // fetchData(localName);
+  // }, [setWebData]);
+// useEffect(() => {
+//   const fetchData = async () => {
+//     try {
+//       console.log('Fetching data...');
+//       const response = await axios.get('http://redsap.org/api.php'); // API call
+//       console.log('Fetched data:', response.data);  // Log the fetched data to check its structure
+      
+//       if (!response.data) {
+//         throw new Error('No data received');
+//       }
 
-  fetchData();
-}, [setWebData]); // Dependency on setWebData
+//       setWebData(response.data);  // Update context with fetched data
+//       setWebDataLocal(response.data);  // Local state update
+
+//     } catch (err) {
+//       console.error('Error occurred:', err);  // Log error for debugging
+//       setError(err.message);
+//       setTimeout(() => {
+//         Alert.alert('Error', `No Internet Connection Something went wrong: ${err.message}`);  // Display error alert
+//       }, 100); // Delay of 100ms
+//     } finally {
+//       setLoading(false);
+//     }
+//   };
+
+//   fetchData();
+// }, [setWebData]); // Dependency on setWebData
 // While loading, show an activity indicator
+// UseEffect to log `webData` after it has been updated
+useEffect(() => {
+  if (webData && webData.usr_name) {
+    console.log('Stored in useState WebData:', webData.usr_name);
+  }
+}, [webData]);  // This effect runs whenever `webData` changes
+
 if (loading) {
   return (
     <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
@@ -824,6 +890,7 @@ if (loading) {
     </View>
   );
 }
+
 // If there is an error, display the error message without disrupting the UI
 // if (error) {
 //   return (
@@ -833,11 +900,17 @@ if (loading) {
 //     </View>
 //   );
 // }
- // Find the user with id: 3
-//  const user = webData.find(item => item.id === 3);  // Filter data to find user with id: 3
-
- // If user with id: 3 exists, display their password, else display an error message
-//  const userPassword = user ? user.pwd : 'User not found';
+//  Find the user with id: 3
+// console.log('localName:', localNamed);  // Check the value of localName
+// const user = webData.find(item => item.usr_name === localNamed);
+// const usernamed = user ? user.usr_name : 'user not found';
+// console.log(user);
+ //  If user with id: 3 exists, display their password, else display an error message
+  // const userPassword = user ? user.usr_pwd : 'User not found';
+  // console.log (userPassword);
+  // const usernamed= user ? user.usr_name : 'user not found';
+  // console.log(usernamed); 
+  
   return (
     // screenView(),
     <>

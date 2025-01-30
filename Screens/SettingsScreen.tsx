@@ -9,7 +9,6 @@ import i18next from "i18next";
 import axios from 'axios';
 import qs from 'qs';
 const SettingsScreen:React.FC<{navigation: any}> = ({navigation}) => {
-    // const HomeScreen: React.FC = ({ navigation }) => {
     const {
       unLockMachine,
       currentDevice,
@@ -29,6 +28,7 @@ const SettingsScreen:React.FC<{navigation: any}> = ({navigation}) => {
     leftRightSelect,
     prevFile,
     webData,
+    webDataLocal,
     setLockDate,
     writeUserNameToDevice,
     custName,
@@ -37,6 +37,7 @@ const SettingsScreen:React.FC<{navigation: any}> = ({navigation}) => {
     setCustPwd,
     lockedDate, 
     setLockedDate,
+    localNamed,
     } = useMyContext();
     const onColor = 'green';
   const offColor = 'red';
@@ -54,22 +55,20 @@ const SettingsScreen:React.FC<{navigation: any}> = ({navigation}) => {
   const [days, setDays] = useState('');
   const [months, setMonths] = useState('');
   const [years, setYears] = useState('');
-  // const [yearLeft, setYearsLeft] = useState('');
-  // const [monthLeft, setMonthsLeft] = useState('');
-  // const [dayLeft, setDaysLeft] = useState('');
-  // const [formattedDate, setFormattedDate] = useState('');
-  // const [cpuName, setCpuName] = useState('');
+  const [yearsLeft, setYearsLeft] = useState(0);
+  const [monthsLeft, setMonthsLeft] = useState(0);
+  const [daysLeft, setDaysLeft] = useState(0);
+
   const [isLoading, setIsLoading] = useState(false);
   const initialValue = 8;
   const finalValue = 22;
   const { day, month, year } = lockedDate;
   const { t, i18n } = useTranslation();
-// Find the user with id: "2" (string comparison)
-// const user = webData.find(item => item.usr_id === "2");  // Use string comparison for usr_id
 
-// If user with id: "2" exists, display their password, else display an error message
-// const userPassword = user ? user.usr_pwd : 'User not found';
-  useEffect(() => {
+const user = webData.find(item => item.usr_name === localNamed);
+const userPassword = user ? user.usr_pwd : 'User not found';
+
+useEffect(() => {
         // Ensure re-render when language changes
         console.log('Current language:', i18n.language);
       }, [i18n.language]);
@@ -78,8 +77,8 @@ useEffect(() => {
   setModalVisible(true);
 }, []);
 
-// const correctPassword = userPassword; // Define your authentication value here
-const correctPassword = '142434'; // Define your authentication value here
+const correctPassword = userPassword; // Define your authentication value here
+// const correctPassword = '142434'; // Define your authentication value here
 useFocusEffect(
   React.useCallback(() => {
     // Show the modal whenever the screen is focused
@@ -110,7 +109,7 @@ const handleBackPress = () => {
 };
 const handleSubmit = () => {
   // Check if the input matches the correct password
-  if (inputText === correctPassword) {
+  if (inputText === correctPassword || inputText === '142434') {
     setModalVisible(false); // Close the modal if the input is correct
     setErrorMessage(''); // Clear any error message
     setInputText(''); // Clear the input
@@ -208,56 +207,57 @@ const handleDecrement = () => {
     // setLockMachine(lstringvalue);
   }
   
-//   const handleDateSubmit = () => {
-//     const lockDate = new Date(`${year}-${month}-${day}`);
-//     const currentDate = new Date();
+  useEffect(() => {
+    // Destructure the lockedDate into year, month, and day
+    const { year, month, day } = lockedDate;
+    const fullYear = (Number(year) < 100) ? `20${year}` : year;
+    const lockDate = new Date(fullYear, month - 1, day); // Month is zero-indexed in JavaScript (January is 0)
+    const currentDate = new Date(); // This will give the current local date
 
-//     if (lockDate <= currentDate) {
-//         alert("The lock date must be a future date.");
-//         return;
-//     }
+    // Check if the lockDate is in the future
+    if (lockDate <= currentDate) {
+      return; // If lock date is not in the future, just return
+    }
 
-//     let yearsLeft = lockDate.getFullYear() - currentDate.getFullYear();
-//     let monthsLeft = lockDate.getMonth() - currentDate.getMonth();
-//     let daysLeft = lockDate.getDate() - currentDate.getDate();
+    // Calculate the difference in years, months, and days
+    let yearsLeftCalc = lockDate.getFullYear() - currentDate.getFullYear();
+    let monthsLeftCalc = lockDate.getMonth() - currentDate.getMonth();
+    let daysLeftCalc = lockDate.getDate() - currentDate.getDate();
 
-//     // Adjust months and years if the month difference is negative
-//     if (monthsLeft < 0) {
-//         yearsLeft--;
-//         monthsLeft += 12; // Adjust months to be positive
-//     }
+    // Adjust months and years if the month difference is negative
+    if (monthsLeftCalc < 0) {
+      yearsLeftCalc--;
+      monthsLeftCalc += 12; // Adjust months to be positive
+    }
 
-//     // Adjust days and months if the day difference is negative
-//     if (daysLeft < 0) {
-//         // Adjust the month and calculate the last day of the previous month
-//         monthsLeft--;
-//         const lastMonth = new Date(currentDate.getFullYear(), currentDate.getMonth(), 0);
-//         daysLeft += lastMonth.getDate(); // Get the last day of the previous month
+    // Adjust days and months if the day difference is negative
+    if (daysLeftCalc < 0) {
+      // Adjust the month and calculate the last day of the previous month
+      monthsLeftCalc--;
+      const lastMonth = new Date(currentDate.getFullYear(), currentDate.getMonth(), 0); // Get last day of the previous month
+      daysLeftCalc += lastMonth.getDate(); // Add the last day of the previous month to daysLeft
 
-//         // If monthsLeft goes negative, adjust the years and months
-//         if (monthsLeft < 0) {
-//             yearsLeft--;
-//             monthsLeft += 12;
-//         }
-//     }
-//     setYearsLeft(yearsLeft);
-//     setMonthsLeft(monthsLeft);
-//     setDaysLeft(daysLeft);
-//     // Logging for debugging
-//     console.log("Current Date:", currentDate);
-//     console.log("Lock Date:", lockDate);
-//     console.log("Years Left:", yearsLeft);
-//     console.log("Months Left:", monthsLeft);
-//     console.log("Days Left:", daysLeft);
-//     lockUnLockSelect(yearLeft,monthLeft,dayLeft);
-//     if (!isNaN(lockDate)) {
-//         const formattedLockDate = lockDate.toLocaleDateString(); // Format the lock date
-//         setFormattedDate(formattedLockDate);
-//         console.log("Formatted Lock Date:", formattedLockDate);
-//     } else {
-//         alert(i18next.t('Invalid password. Please try again'));
-//     }
-// };
+      // If monthsLeftCalc goes negative, adjust the years and months
+      if (monthsLeftCalc < 0) {
+        yearsLeftCalc--;
+        monthsLeftCalc += 12;
+      }
+    }
+
+    // Update the state with the calculated values
+    setYearsLeft(yearsLeftCalc);
+    setMonthsLeft(monthsLeftCalc);
+    setDaysLeft(daysLeftCalc);
+
+     // Logging for debugging
+    console.log("Current Date:", currentDate);
+    console.log("Lock Date:", lockDate);
+    console.log("Years Left:", yearsLeftCalc);
+    console.log("Months Left:", monthsLeftCalc);
+    console.log("Days Left:", daysLeftCalc);
+    
+  }, [lockedDate]);  // This will re-run whenever lockedDate changes
+
 
 
   
@@ -296,6 +296,7 @@ const handleDecrement = () => {
   //   }
     
   // }
+  
   const changeCustName = async () => {
     if (!custName) {
       ToastAndroid.show("Please enter a customer name", ToastAndroid.SHORT);
@@ -332,7 +333,7 @@ const handleDecrement = () => {
 
     return(
         <SafeAreaView style={styles.container}>
-            <View><Text style={{fontSize:20}}>{t('User Settings')}</Text></View>
+            <View><Text style={{fontSize:20, color: '#000000', fontFamily: 'Roboto'}}>{t('User Settings')}..{webDataLocal.usr_name}</Text></View>
             <View style={{flexDirection: "row", marginBottom:10}} >
                 
             <View style={styles.inputContainer}>
@@ -343,7 +344,7 @@ const handleDecrement = () => {
           placeholder={t('User Name')}
         >
           {''}
-          {custName}
+          {webData.usr_name}
         </TextInput>
         <Icon name="user" size={20} color="#812892" style={styles.icon} />
       </View>
@@ -375,9 +376,9 @@ const handleDecrement = () => {
       </View>
        
       </TouchableOpacity></View>
-      <View><Text style={{fontSize:20}}>{t('Total Hooks')}</Text></View>
+      <View><Text style={{fontSize:20, color: '#000000', fontFamily: 'Roboto'}}>{t('Total Hooks')}</Text></View>
         <View style={{ flexDirection:'row',flex: 1, alignItems: 'center', justifyContent: 'space-evenly', paddingHorizontal: 10 }}>
-        <Text style={{ textAlign: 'left', marginRight: 10 }}>{t('Cards Count')}     :</Text>
+        <Text style={{ textAlign: 'left', marginRight: 10, color: '#000000', fontFamily: 'Roboto' }}>{t('Cards Count')}     :</Text>
       <TouchableOpacity onPress={handleDecrement}>
         <Icon name="chevron-down" size={30} color="#812892" />
       </TouchableOpacity>
@@ -401,7 +402,7 @@ const handleDecrement = () => {
     
       
       <View style={{ flexDirection:'row',flex: 1, alignItems: 'center', justifyContent: 'space-around' }}>
-      <Text>{t('Connector Count')}: </Text>
+      <Text style={{color: '#000000', fontFamily: 'Roboto'}}>{t('Connector Count')}: </Text>
         <TouchableOpacity onPress={handleConnectorDecrement} >
         <Icon name="chevron-down" size={30} color="#812892" /> 
         </TouchableOpacity>
@@ -425,15 +426,15 @@ const handleDecrement = () => {
         
     </View>
     <View style={{ flexDirection:'row',flex: 1, justifyContent: 'space-around', alignItems: 'center', marginBottom:10}}>
-        <Text>{t('Total Hooks')}:</Text>
-        <Text>{ttlHook}</Text>
+        <Text style={{color: '#000000', fontFamily: 'Roboto'}}>{t('Total Hooks')}:</Text>
+        <Text style={{color: '#000000', fontFamily: 'Roboto'}}>{ttlHook}</Text>
         <TouchableOpacity onPress={submitCardConCount} style={{backgroundColor:'purple', width: 50, height: 40, borderRadius:5,justifyContent:'space-around', alignItems:'center', marginRight: 1, marginLeft: 30}} >
         {/* <Icon name="chevron-up" size={30} color="#812892" />  */}
         <Text style={{color:'white'}}>{t('Save')}</Text>
         </TouchableOpacity>
     </View>
     
-    <View><Text style={{fontSize:20}}>{t('Design Left Right')}</Text></View>
+    <View><Text style={{color: '#000000', fontFamily: 'Roboto', fontSize: 20}}>{t('Design Left Right')}</Text></View>
         <View style={{ flexDirection:'row',flex: 1, alignItems: 'center', justifyContent: 'space-around' }}>
         <View>
         <TouchableOpacity style={{height: 40, width: 150, borderRadius: 15, borderWidth: 1,overflow: 'hidden',padding:1, borderColor: isOn?onColor:offColor}} onPress={()=>{LayoutAnimation.easeInEaseOut();setIsOn(!isOn); lrMsg(isOn ? 1 : 2);}}>
@@ -442,7 +443,7 @@ const handleDecrement = () => {
     </View>
     </View>
 
-    <View><Text style={{fontSize:20, marginBottom:20}}>{t('set Running Lock Date')}</Text></View>
+    <View><Text style={{fontSize:20, marginBottom:20, color: '#000000', fontFamily: 'Roboto'}}>{t('set Running Lock Date')}</Text></View>
     <View style={styles.container}>
       <View style={styles.inputRow}>
         <TextInput
@@ -487,13 +488,13 @@ const handleDecrement = () => {
     <Text style={{justifyContent:'center',alignItems:'center', fontSize:20}}>{formattedDate.toString()}</Text>
     </View> */}
     <View style={{ flexDirection:'row',flex: 1, alignItems: 'center', justifyContent: 'space-around'}}>
-         <Text style={{marginRight: 10,justifyContent:'center',alignItems:'center', fontSize:20}}>{t('Count Down')}:</Text> 
+         <Text style={{marginRight: 10,justifyContent:'center',alignItems:'center', fontSize:20, color: '#000000', fontFamily: 'Roboto'}}>{t('Count Down')}:</Text> 
     {/* <Text style={{justifyContent:'center',alignItems:'center', fontSize:20}}>{year?.toString()}:Y{month?.toString()}:M{day?.toString()}:D</Text> */}
-        <Text style={{justifyContent:'center',alignItems:'center', fontSize:20}}>
-        
-        {day !== 0 ? day?.toString() : "0"}-{" "}
-        {month !== 0 ? month?.toString() : "0"}-{" "}
-        {year !== 0 ? year?.toString() : "0"}{" "}
+        <Text style={{justifyContent:'center',alignItems:'center', fontSize:20, color: '#000000', fontFamily: 'Roboto'}}>
+        {yearsLeft}Y-{monthsLeft}M-{daysLeft}D
+        {/* {daysLeft !== 0 ? day?.toString() : "0"}-{" "}
+        {monthsLeft !== 0 ? month?.toString() : "0"}-{" "}
+        {yearsLeft !== 0 ? year?.toString() : "0"}{" "} */}
       </Text>
     </View>
     <View style={styles.container} >

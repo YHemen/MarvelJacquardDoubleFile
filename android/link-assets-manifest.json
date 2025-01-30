@@ -1,0 +1,49 @@
+{
+  "migIndex": 1,
+  "data": [
+    {
+      "path": "assets/fonts/Aovel Sans Rounded.ttf",
+      "sha1": "6b3bff7dd01a9d7682e97c253e315bd9943a7baf"
+    },
+    {
+      "path": "assets/fonts/Apercu Movistar.ttf",
+      "sha1": "5c253f76557f5832be57247d1e1803d7862eafd1"
+    },
+    {
+      "path": "assets/fonts/digital-7 (italic).ttf",
+      "sha1": "ba2f68370fa15d2b855d2bf6851d21b13b70dc87"
+    },
+    {
+      "path": "assets/fonts/digital-7 (mono italic).ttf",
+      "sha1": "b44189e1acc6432ffff0a905711354067d5d5f46"
+    },
+    {
+      "path": "assets/fonts/digital-7 (mono).ttf",
+      "sha1": "dabe381cb194d25d64f7f32d8925c1509b95ec08"
+    },
+    {
+      "path": "assets/fonts/digital-7.ttf",
+      "sha1": "7e1cf55ecbeaaa82465624ffb32b54e85453325c"
+    },
+    {
+      "path": "assets/fonts/GDDigit13LED.otf",
+      "sha1": "10d3506f76bcab98c3a3feac3e1b435ba4e0f18c"
+    },
+    {
+      "path": "assets/fonts/Roboto Thin.ttf",
+      "sha1": "eb51d6042f676b736a552744a77dc352d92a08e1"
+    },
+    {
+      "path": "assets/fonts/Roboto-VariableFont_wdth,wght.ttf",
+      "sha1": "6bd9646ab22c0301ce3adbfe8707213a67900404"
+    },
+    {
+      "path": "assets/fonts/Technology-Bold.ttf",
+      "sha1": "38bd291eda5e6fec6d2efbf3ccd258b6986ed69c"
+    },
+    {
+      "path": "assets/fonts/Technology.ttf",
+      "sha1": "36f00536068cbdb385f50467db5f1b5345f134ad"
+    }
+  ]
+}

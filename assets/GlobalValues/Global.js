@@ -10,7 +10,7 @@ const globalStyles = StyleSheet.create({
      },
   text: {
     color: '#000000', // Set your default font color here
-    fontFamily: 'Roboto',
+    fontFamily: 'Technology',
     fontWeight: 'bold',
     alignItems: 'center',
   },

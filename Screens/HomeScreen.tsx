@@ -1,5 +1,5 @@
 import React, {useState,useEffect, useCallback} from 'react';
-
+import globalStyles from '../assets/GlobalValues/Global';
 import {
   SafeAreaView,
   Image,
@@ -23,6 +23,7 @@ import '../services/i18n';
 import i18next from "i18next";
 
 const HomeScreen: React.FC = () => {
+  
   const { t, i18n } = useTranslation();
   const [isOverlayVisible, setOverlayVisible] = useState(false);
   const [imageUri, setImageUri] = useState(null);
@@ -205,7 +206,7 @@ useEffect(() => {
         }}>
         <View style={{alignSelf: 'center', alignItems: 'center'}}>
           <View>
-            <Text style={{fontSize: 24, fontWeight: 'bold', marginBottom: 10,}}>{t('BODY')}</Text>
+            <Text style={{fontFamily: 'Poppins-Bold', fontSize: 24, color:  '#000000', marginBottom: 10, fontWeight: 'bold'}}>{t('BODY')}</Text>
           </View>
           {/* <View><Text style={{fontSize:16,fontStyle:'italic'}}>templates/alternate</Text></View> */}
         </View>
@@ -223,14 +224,14 @@ useEffect(() => {
             <Icon name="chevron-down" size={30} color="#812892" />
           </TouchableOpacity>
           
-          <TouchableOpacity onLongPress={handleLongPress} activeOpacity={0.7}>
+          {/* <TouchableOpacity onLongPress={handleLongPress} activeOpacity={0.7}> */}
           <TextInput
             keyboardType="number-pad"
             //  value={pCount}
-            // onChangeText={handleInputChange}
+            onChangeText={handleInputChange}
             placeholder='Input Number'
             maxLength={6}
-            editable={false}
+            editable={true}
             style={{
               width: 80,
               height:46,
@@ -248,7 +249,7 @@ useEffect(() => {
             {' '}
             {pCount}
           </TextInput>
-          </TouchableOpacity>  
+          {/* </TouchableOpacity>   */}
           
           <TouchableOpacity onPress={handleIncrement}>
             <Icon name="chevron-up" size={30} color="#812892" textAlign="right" />
@@ -259,11 +260,11 @@ useEffect(() => {
         </TouchableOpacity>
         </View>
         <View>
-          <Text style={{marginBottom:10, textAlign: 'center', fontWeight: 'bold', fontSize: 20}}>
+          <Text style={{marginBottom:10, textAlign: 'center', fontWeight: 'bold', fontSize: 20, color: '#000000', fontFamily: 'apercumovistarbold'}}>
           {t('Height')}: {width} / {t('Width')}: {height}
           </Text>
           <View>
-            <Text style={{marginBottom: 10, textAlign: 'center', fontWeight: 'bold', fontSize: 14}}>{t('Cards')}: {cardCount} / {t('Connectors')}: {cnCount} / {t('Total Hooks')}: {ttlHook}</Text>
+            <Text style={{marginBottom: 10, textAlign: 'center', fontWeight: 'bold', fontSize: 14, color: '#000000', fontFamily: 'Roboto'}}>{t('Cards')}: {cardCount} / {t('Connectors')}: {cnCount} / {t('Total Hooks')}: {ttlHook}</Text>
             </View>
         </View>
         <View>
@@ -272,10 +273,11 @@ useEffect(() => {
             data={dropdownData}
             save="key"
             placeholder={prevFile ? prevFile : 'Select File'}
-            boxStyles={styles.selectBox}
-            dropdownStyles={styles.dropdown}
-            dropdownTextStyles={styles.dropdownText}
-            placeholderStyle={styles.placeholder}
+            boxStyles={{color: '#000000', fontFamily: 'Roboto'}}
+            dropdownStyles={{color: '#000000', fontFamily: 'Roboto'}}
+            dropdownTextStyles={{color: '#000000', fontFamily: 'Roboto'}}
+            placeholderStyle={{color: '#000000', fontFamily: 'Roboto'}}
+            selectedTextStyles={{color: '#000000', fontFamily: 'Roboto'}}
             selected={prevFile}
           />
           <ScrollView refreshControl={
@@ -300,14 +302,12 @@ useEffect(() => {
           flexDirection: 'row',
           justifyContent: 'space-between',
           alignItems: 'center',
-          marginLeft: 60,
+          marginLeft: -220,
           marginTop:270,
         }}>
         <View>
-          <Text style={{fontSize: 30, fontWeight: 'bold', color: 'purple', marginTop:-40, alignItems:'center'}}>
-            {rpmValue}
-          </Text>
-          
+          <Text style={{fontFamily: 'Technology-Bold', fontSize: 70, color: 'purple', marginTop: -8}}>{rpmValue}</Text>
+          <Text style={{ fontFamily: 'Technology-Bold', fontSize: 30, color: 'purple', marginTop: 5 }}>RPM</Text>
         </View>
         <View
           style={{
@@ -324,14 +324,13 @@ useEffect(() => {
           {isOverlayVisible ? <Icon name="unlock" size={30} color="#FFFFFF" /> : <Icon name="lock" size={30} color="#FFFFFF" />}
         </Text>
       </TouchableOpacity>
-
       {/* Overlay */}
       {isOverlayVisible && (
         <Modal transparent={true} animationType="fade">
           <View style={styles.overlay}>
-            <Text style={styles.overlayText}>Un-Lock to Change Settings</Text>
+            <Text style={styles.overlayText}>{t('Un-Lock to Change Settings')}</Text>
             <TouchableOpacity style={styles.closeButton} onPress={toggleOverlay}>
-              <Text style={styles.buttonText}><Icon name="unlock" size={30} color="#FFFFFF" /></Text>
+            <Text style={styles.buttonText}><Icon name="unlock" size={30} color="#FFFFFF" /></Text>
             </TouchableOpacity>
           </View>
         </Modal>
@@ -348,6 +347,11 @@ const styles = StyleSheet.create({
     flex: 1,
     // justifyContent: 'center',
     alignItems: 'center',
+  },
+  digitalText: {
+    fontSize: 60,
+    color: '#00FF00', // Green color for digital look
+    fontFamily: 'digital-7', // Use the font name as it appears inside the font file
   },
   btn: {
     width: 200,
@@ -389,7 +393,7 @@ const styles = StyleSheet.create({
   },
   closeButton: {
     position: 'absolute',
-    bottom: 50, // Adjust for vertical spacing
+    bottom: 10, // Adjust for vertical spacing
     right: 8, // Adjust for horizontal spacing
     width: 50,
     height: 50,
@@ -405,7 +409,7 @@ const styles = StyleSheet.create({
   },
   floatingButton: {
     position: 'absolute',
-    bottom: 50, // Adjust for vertical spacing
+    bottom: 10, // Adjust for vertical spacing
     right: 8, // Adjust for horizontal spacing
     width: 50,
     height: 50,
@@ -428,7 +432,7 @@ const styles = StyleSheet.create({
     borderTopColor: 'transparent',
   },
   image: {
-    width: 335,
+    width: '100%',
     height: 250,
     marginTop: 20,
   },

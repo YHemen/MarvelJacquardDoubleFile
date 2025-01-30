@@ -9,7 +9,10 @@ import SettingsScreen from './SettingsScreen';
 import SplashScreen from './SplashScreen';
 import DetailsScreen from './DetailsScreen';
 import ExitScreen from './ExitScreen';
-import Trenary from './Trenary';
+import LoadingScreen from './LoadingScreen';
+import ProductsScreen from './ProductsScreen';
+import ServicesScreen from './ServicesScreen';
+import { useNavigation } from '@react-navigation/native';
 import {useMyContext} from '../Components/MyContext';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
@@ -21,6 +24,7 @@ import LanguageSelector from '../services/LanguageSelector';
 import { useTranslation } from 'react-i18next'; // Import useTranslation at the top
 import '../services/i18n';
 import i18next from "i18next";
+import ScanScreen from './ScanScreen';
 // Custom Drawer Content
 const CustomDrawerContent = (props) => {
   const { t, i18n } = useTranslation();
@@ -52,6 +56,26 @@ const AppDrawer = ({isConnected}) => {
   useEffect(() => {
     // console.log('Drawer is Connected:', isConnected);
   }, [isConnected]);  // Log whenever isConnected changes
+  const navigation = useNavigation(); // Use navigation hook
+
+  // useEffect(() => {
+  //   if (isConnected) {
+  //     // Navigate to HomeScreen when isConnected becomes true
+  //     navigation.navigate('HomeScreen');
+  //   }
+  // }, [isConnected, navigation]); // Watch for changes in isConnected
+  useEffect(() => {
+    if (isConnected) {
+      // Set a timeout to navigate to HomeScreen after 8 seconds
+      const timer = setTimeout(() => {
+        navigation.navigate('HomeScreen');
+      }, 8000); // 8000 milliseconds = 8 seconds
+  
+      // Clean up the timeout when the component unmounts or isConnected changes
+      return () => clearTimeout(timer);
+    }
+  }, [isConnected, navigation]);
+
     return (
     <Drawer.Navigator 
       drawerLockMode={isConnected ? 'unlocked' : 'locked'}
@@ -96,18 +120,32 @@ const AppDrawer = ({isConnected}) => {
       }}
     >
       <Drawer.Screen 
-        name={t('ScanDevices')} 
+        name="ScanDevices"
         component={ScanningScreen} 
+        // options={{
+        //   drawerIcon: ({ color, size }) => (<Icon name="spinner" color={color} size={size} />),
+        //   title: t('ScanDevices'),
+        // }} 
         options={{
+          headerLeft: () => (
+            isConnected ? (
+              <TouchableOpacity onPress={() => console.log('Hamburger clicked!')}>
+                 <Text style={styles.hamburgerButton}><Icon name="copy" color="white" size={20} /></Text>
+                 <Text style={{color: 'white'}}>Merge</Text>
+              </TouchableOpacity>
+            ) : null
+          ),
           drawerIcon: ({ color, size }) => (<Icon name="spinner" color={color} size={size} />),
+          title: t('ScanDevices'),
         }} 
       />
       <Drawer.Screen 
-        name={t('HomeScreen')} 
+        name= "HomeScreen" 
         // name={t('Home', { defaultValue: 'Home' })}
         component={HomeScreen} 
         options={{
           drawerIcon: ({ color, size }) => (<Icon name="home" color={color} size={size} />),
+          title: t('HomeScreen')
         }} 
       />
       <Drawer.Screen 
@@ -145,16 +183,30 @@ const AppDrawer = ({isConnected}) => {
           drawerIcon: ({ color, size }) => (<Icon name="sign-out" color={color} size={size} />),
         }} 
       />
-      <Drawer.Screen 
+      {/* <Drawer.Screen 
         name={t('SelectLanguage')} 
         component={LanguageSelector} 
         options={{
           drawerIcon: ({ color, size }) => (<Icon name="language" color={color} size={size} />),
         }} 
-      />
+      /> */}
       <Drawer.Screen 
-        name={t('TrenaryScreen')} 
-        component={Trenary} 
+        name={t('ProductsScreen')} 
+        component={ProductsScreen} 
+        options={{
+          drawerIcon: ({ color, size }) => (<Icon name="language" color={color} size={size} />),
+        }} 
+      />
+      {/* <Drawer.Screen 
+        name={t('ServicesScreen')} 
+        component={ServicesScreen} 
+        options={{
+          drawerIcon: ({ color, size }) => (<Icon name="language" color={color} size={size} />),
+        }} 
+      />  */}
+      <Drawer.Screen 
+        name={t('SelectLanguage')} 
+        component={LanguageSelector} 
         options={{
           drawerIcon: ({ color, size }) => (<Icon name="language" color={color} size={size} />),
         }} 
@@ -172,7 +224,6 @@ const AppNavigator: React.FC = () => {
     <NavigationContainer>
       <Stack.Navigator screenOptions={{ headerShown: false }}>
         <Stack.Screen name="Splash" component={SplashScreen} />
-        {/* <Stack.Screen name="Main" component={AppDrawer} /> */}
         <Stack.Screen 
           name="Main" 
           children={() => <AppDrawer isConnected={isConnected} />} // Pass isConnected as prop to AppDrawer

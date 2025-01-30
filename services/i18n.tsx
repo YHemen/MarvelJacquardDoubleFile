@@ -48,7 +48,8 @@ i18next.use(initReactI18next).init({
         "UnLock":"UnLock",
         "Lock":"Lock",
         "Count Down":"Count Down",
-        "Marvel Jacquards":"Marvel Jacquards",
+        "MarvelJacquards":"Marvel Jacquards",
+        "Un-Lock to Change Settings": "Un-Lock to Change Settings",
 
         },
       },
@@ -92,7 +93,7 @@ i18next.use(initReactI18next).init({
           "UnLock":"అన్ లాక్ ",
           "Lock":"లాక్",
           "Count Down":"కౌంట్ డౌన్",
-          "Marvel Jacquards":"మర్వెల్ జాకార్డ్స్",
+          "MarvelJacquards":"మర్వెల్ జాకార్డ్స్",
           "Alert":"అప్రమత్తం",
           "EXIT APP":"నిష్క్రమించండి",
           "Please Connect to Marvel Jacquards Wi-Fi":"దయచేసి Marvel Jacquards Wi-Fiకి కనెక్ట్ చేయండి",
@@ -102,13 +103,14 @@ i18next.use(initReactI18next).init({
           "Cancel":"రద్దు చేయి",
           "Please enter a file name with extension (e.g., butta.bmp)":"దయచేసి పొడిగింపుతో ఫైల్ పేరును నమోదు చేయండి (ఉదా., butta.bmp)",
           "you can not access files without wi-fi connection!":"మీరు wi-fi కనెక్షన్ లేకుండా ఫైల్‌లను చూడలేరు!",
+          "Un-Lock to Change Settings":"సెట్టింగ్‌లను మార్చడానికి అన్‌లాక్ చేయండి",
 
         },
       },
       kn: {
         translation: {
           "ScanDevices": "ಸ್ಕ್ಯಾನ್ ಮಾಡಿ",
-          "Home": "ಹೋಂ ಸ್ಕ್ರೀನ್  ",
+          "HomeScreen": "ಹೋಂ ಸ್ಕ್ರೀನ್  ",
           "Files": "ಫೈಲ್ಸ್ ಸ್ಕ್ರೀನ್",
           "TestRun": "ಟೆಸ್ಟ್ ಸ್ಕ್ರೀನ್",
           "Settings": "ಸೆಟ್ಟಿಂಗ್ಸ್ ಸ್ಕ್ರೀನ್",
@@ -145,13 +147,14 @@ i18next.use(initReactI18next).init({
         "UnLock":"ಅನ್ಲಾಕ್ ",
         "Lock":"ಬೀಗ",
         "Count Down":"ಎಣಿಸಿ",
-        "Marvel Jacquards":"ಮಾರ್ವೆಲ್ ಜಾಕಾರ್ಡ್ಸ್",
+        "MarvelJacquards":"ಮಾರ್ವೆಲ್ ಜಾಕಾರ್ಡ್ಸ್",
+        "Un-Lock to Change Settings":"ಸೆಟ್ಟಿಂಗ್ಗಳನ್ನು ಬದಲಾಯಿಸಲು ಅನ್ಲಾಕ್ ಮಾಡಿ",
         },
       },
       hi: {
         translation: {
           "ScanDevices": "स्कैन डिवाइस",
-          "Home": "होम स्क्रीन",
+          "HomeScreen": "होम स्क्रीन",
           "Files": "फ़ाइलें",
           "TestRun": "टेस्ट रन स्क्रीन",
           "Settings": "सेटिंग स्क्रीन",
@@ -189,6 +192,7 @@ i18next.use(initReactI18next).init({
         "Lock":"लॉक",
         "Count Down":"गिनती करें",
         "Marvel Jacquards":"मारवेल जाकार्डस",
+        "Un-Lock to Change Settings":"सेटिंग्स बदलने के लिए अनलॉक करें",
         },
       },
       ta: {
@@ -240,7 +244,8 @@ i18next.use(initReactI18next).init({
             "Are you sure you want to exit?": "நீங்கள் வெளியேற விரும்புகிறீர்களா?",
             "Cancel": "ரத்து செய்யவும்",
             "Please enter a file name with extension (e.g., butta.bmp)": "தயவுசெய்து நீட்டிப்புடன் கோப்புப் பெயரை உள்ளிடவும் (எ.கா., butta.bmp)",
-            "you can not access files without wi-fi connection!": "நீங்கள் Wi-Fi இணைப்பின்றி கோப்புகளைக் அணுக முடியாது!"
+            "you can not access files without wi-fi connection!": "நீங்கள் Wi-Fi இணைப்பின்றி கோப்புகளைக் அணுக முடியாது!",
+            "Un-Lock to Change Settings": "உஙளுக் அமைப்புகளை மாற்ற",
         },
       },
     },

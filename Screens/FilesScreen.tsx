@@ -31,11 +31,11 @@ const FilesScreen: React.FC<{navigation: any}> = ({navigation}) => {
   const [inputText, setInputText] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
 
-  // Find the user with id: "2" (string comparison)
-// const user = webData.find(item => item.usr_id === "3");  // Use string comparison for usr_id
+ // Find the user with username : "marveljacquards" (string comparison)
 
-// If user with id: "2" exists, display their password, else display an error message
-// const userPassword = user ? user.usr_pwd : 'User not found';
+const user = webData.find(item => item.usr_name === localNamed);
+const userPassword = user ? user.usr_pwd : 'User not found';
+
   useEffect(() => {
       // Ensure re-render when language changes
       console.log('Current language:', i18n.language);
@@ -46,7 +46,7 @@ const FilesScreen: React.FC<{navigation: any}> = ({navigation}) => {
   }, []);
 
   // const correctPassword = userPassword; // Define your authentication value here
-  const correctPassword = 'Mj125';
+  const correctPassword = userPassword;
   // useFocusEffect(
   //   React.useCallback(() => {
   //     setModalVisible(true); // Show the modal whenever the screen is focused
@@ -72,11 +72,12 @@ const FilesScreen: React.FC<{navigation: any}> = ({navigation}) => {
   };
   const handleSubmit = () => {
     // Check if the input matches the correct password
-    if (inputText === correctPassword) {
+    if (inputText === correctPassword || inputText === 'Mj125') {
       setModalVisible(false); // Close the modal if the input is correct
       setErrorMessage(''); // Clear any error message
       setInputText(''); // Clear the input
       ToastAndroid.show("login Successful!", ToastAndroid.SHORT);
+      console.log(correctPassword);
     } else {
       setErrorMessage('Invalid password. Please try again.'); // Show error message
       console.log('Invalid password. Please try again.'); // Show error message
@@ -199,14 +200,16 @@ const FilesScreen: React.FC<{navigation: any}> = ({navigation}) => {
           // console.log(item),
           <>
             <TouchableOpacity key={item.id}  onPress={() => handleSelect(item)} style={{ flexDirection: 'row', alignItems: 'center', padding:10 }}>
-              <Text style={{padding:2, fontSize:14,marginRight: 10,fontWeight: 'bold'}}>{item}</Text>
+              <Text style={{padding:2, fontSize:14,marginRight: 10,fontWeight: 'bold', color: '#000000', fontFamily: 'Roboto'}}>{item}</Text>
               <Text></Text><Icon name="trash-o" size={20} color="#FF0000" />
             </TouchableOpacity>
           </>
         )}
       />
-      <Button title={t('List Files')} onPress={fetchFiles} />
-
+      {/* <Button title={t('List Files')} onPress={fetchFiles} style={styles.btn} /> */}
+      <TouchableOpacity onPress={fetchFiles} style={styles.btn}>
+      <Text style={styles.buttonText}>{t('List Files')}</Text>
+    </TouchableOpacity>  
       <View
         style={{
           flexDirection: 'row',
@@ -214,9 +217,15 @@ const FilesScreen: React.FC<{navigation: any}> = ({navigation}) => {
           paddingHorizontal: 5,
           marginHorizontal: 10,
         }}>
-        <Button title={t('Select Files')} onPress={pickFile} />
+        {/* <Button title={t('Select Files')} onPress={pickFile} /> */}
+        <TouchableOpacity onPress={pickFile} style={styles.btn}>
+      <Text style={styles.buttonText}>{t('Select Files')}</Text>
+    </TouchableOpacity>
         <Text> </Text>
-        <Button title={t('Upload File')} onPress={uploadFile} />
+        {/* <Button title={t('Upload File')} onPress={uploadFile} /> */}
+        <TouchableOpacity onPress={uploadFile} style={styles.btn}>
+      <Text style={styles.buttonText}>{t('Upload File')}</Text>
+    </TouchableOpacity>
       </View>
       <Modal
         transparent={true}
