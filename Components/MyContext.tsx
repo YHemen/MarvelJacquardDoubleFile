@@ -9,7 +9,7 @@ import React, {
 } from 'react';
 import BleManager from 'react-native-ble-manager';
 import {Buffer} from 'buffer';
-
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import {
   View,
@@ -73,37 +73,49 @@ export const MyContextProvider: React.FC<{children: ReactNode}> = ({
   const [deviceId, setDeviceId] = useState(null);
   const [sdFiles, setSdFiles] = useState([]);
   const [prevFile,setPrevFile] = useState();
+  const [nextFile, setNextFile] = useState();
   const [rpmValue, setrpmValue] = useState();
-  const [pCount, setPCount] = useState();
+  const [pCount, setPCount] = useState<number | undefined>(undefined);  // or just use `useState<number>(0)` if you want an initial value
+  const [pCount1, setPCount1] = useState<number | undefined>(undefined);
+  // const [pCount, setPCount] = useState();
+  // const [pCount1, setPCount1] = useState();
   const [data,setData] = useState();
   const [lockedDate, setLockedDate] = useState<{ day: number | null, month: number | null, year: number | null }>({
     day: null,
     month: null,
     year: null,
   });
-  const [height, setHeight] = useState('');
-  const [width, setWidth] = useState('');
+
+  const [f1height, setF1height] = useState<number | undefined>(undefined);
+  const [f1width, setF1width] = useState<number | undefined>(undefined);
+  const [f2height, setF2height] = useState<number | undefined>(undefined);
+  const [f2width, setF2width] = useState<number | undefined>(undefined);
   const [cnCount, setCnCount] = useState('');
   const [cardCount, setCardCount] = useState('');
-  const [ttlHook,setTtlHook] = useState('');
-  const [designDir,setDesignDir] = useState('');
-  const [lockStatus,setLockStatus] = useState('');
+  const [ttlHook, setTtlHook] = useState('');
+  const [designDir, setDesignDir] = useState('');
+  const [lockStatus, setLockStatus] = useState('');
   const [custName, setCustName] = useState('');
   const [custPwd, setCustPwd] = useState('');
   const [webData, setWebData] = useState<Array<{ usr_id: string, usr_name: string, usr_pwd: string }>>([]);
- 
+  const [currLang, setCurrLang] = useState<string | null>('en');
   const [webDataLocal, setWebDataLocal] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [localNamed, setLocalNamed] = useState<string | null>(null);
-
+  const [isDataInAsyncStorage, setIsDataInAsyncStorage] = useState(false);
+  
   const BleManagerModule = NativeModules.BleManager;
   const BleManagerEmitter = new NativeEventEmitter(BleManagerModule);
   
   useEffect(() => {
     // Ensure re-render when language changes
     console.log('Current language:', i18n.language);
+    console.log('changedLanguage',currLang);
+    // saveLanguageToAsyncStorage();
   }, [i18n.language]);
+  
+
   useEffect(() => {
     BleManager.start({showAlert: false}).then(() => {
       // Success code
@@ -122,70 +134,6 @@ export const MyContextProvider: React.FC<{children: ReactNode}> = ({
       });
   }, []);
 
-//   useEffect(() =>{
-//     const requestLocationPermission = async () => {
-//   try {
-//     const granted = await PermissionsAndroid.request(
-//       PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
-//       {
-//         title: "Location Permission",
-//         message: "We need access to your location to scan for Wi-Fi networks",
-//         buttonNegative: "Cancel",
-//         buttonPositive: "OK",
-//       }
-//     );
-//     if (granted === PermissionsAndroid.RESULTS.GRANTED) {
-//       console.log("Location permission granted");
-//     } else {
-//       console.log("Location permission denied");
-//     }
-//   } catch (err) {
-//     console.warn(err);
-//   }
-// };
-
-// // Function to connect to Wi-Fi
-// const connectToWifi = async () => {
-//   await requestLocationPermission();
-
-//   try {
-//     // Enable Wi-Fi
-//     await WifiManager.setEnabled(true);
-
-//     // Connect to specific Wi-Fi network (replace with your Wi-Fi SSID and password)
-//     await WifiManager.connectToProtectedSSID('your_network_ssid', 'your_network_password', false);
-//     console.log('Connected to Wi-Fi');
-//   } catch (error) {
-//     console.error('Failed to connect to Wi-Fi:', error);
-//   }
-// };
-
-// // Call the function to connect to Wi-Fi
-// // connectToWifi();
-//   });
-
-  useEffect(() =>{
-  const requestLocationPermission = async () => {
-  try {
-    const granted = await PermissionsAndroid.request(
-      PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
-      {
-        title: "Location Permission",
-        message: "We need access to your location to scan for Wi-Fi networks",
-        buttonNegative: "Cancel",
-        buttonPositive: "OK",
-      }
-    );
-    if (granted === PermissionsAndroid.RESULTS.GRANTED) {
-      console.log("Location permission granted");
-    } else {
-      console.log("Location permission denied");
-    }
-  } catch (err) {
-    console.warn(err);
-  }
-};
-  });
 
   useEffect(() => {
     let stopListener = BleManagerEmitter.addListener(
@@ -257,145 +205,192 @@ export const MyContextProvider: React.FC<{children: ReactNode}> = ({
     }
   };
   
-  const readAllCharDataFromEvent = (data: any)=>{
-    const {service,characteristic,value} = data;
-    if(service=== serviceid1 && characteristic === caracid1)
-    {
-        const caracidValue = bytesToString(value);
-        if(caracidValue.startsWith('RPM.'))
-        {
-          const rpmParts = caracidValue.split('.'); // Splits "RPM.0" into ["RPM", "0"]
-          const rpmNumber = rpmParts[1];  // Access the second part (i.e., the "0" part)
-          console.log('RPM Number:', rpmNumber);
-         setrpmValue(rpmNumber);
-         console.log('rpmValue',caracidValue); 
+  useEffect(() => {
+    console.log('Machine Lock Status:', lockStatus);
+  }, [lockStatus]);
+
+
+  const readAllCharDataFromEvent = (data: any) => {
+    //start of readAllCharDataFromEvent
+    const {service, characteristic, value} = data;
+    if (service === serviceid1 && characteristic === caracid1) {
+      const caracidValue = bytesToString(value);
+      if (caracidValue.startsWith('RPM.')) {
+        const rpmParts = caracidValue.split('.'); // Splits "RPM.0" into ["RPM", "0"]
+        const rpmNumber = rpmParts[1]; // Access the second part (i.e., the "0" part)
+        console.log('RPM Number:', rpmNumber);
+        setrpmValue(rpmNumber);
+        console.log('rpmValue', caracidValue);
+      }
+      if (caracidValue.endsWith('.bmp')) {
+        setSdFiles(currentFiles => {
+          // Check if the file already exists in sdFiles before adding it
+          if (!currentFiles.includes(caracidValue)) {
+            return [...currentFiles, caracidValue]; // Only add if not already present
+          }
+          return currentFiles; // Return the existing list if the file is a duplicate
+        });
+        console.log('SDCardData', caracidValue);
+      }
+      if (caracidValue.startsWith('LS/')) {
+        const lsnotify = caracidValue.substring(3).replace(/^\/+/, '');
+        console.log('caracid Lock Status:', lsnotify);
+        setLockStatus(lsnotify);
+        console.log('Machine Lock Status', lockStatus);
+      }
+    } // end of Caracid1
+  
+    if (service === serviceid1 && characteristic === caracid3) {
+      // Convert byte array to string
+      const caracid3Value = bytesToString(value);
+      console.log('Raw byte array:', value); // Log the raw byte array for inspection
+      console.log('Converted caracid3Value:', caracid3Value); // Log the result of bytesToString
+  
+      // Split the value by dot (.) to get all the height and width values
+      const dimensions = caracid3Value.split('.');
+  
+      // Ensure we have exactly 4 values (height1, width1, height2, width2)
+      if (dimensions.length === 4) {
+        // Parse f1height and f1width
+        const heightParsedF1 = parseInt(dimensions[0], 10);
+        const widthParsedF1 = parseInt(dimensions[1], 10);
+        if (!isNaN(heightParsedF1) && !isNaN(widthParsedF1)) {
+          setF1height(heightParsedF1); // Set f1 height
+          setF1width(widthParsedF1); // Set f1 width
+        } else {
+          console.error('Failed to parse height and width for f1.');
         }
-        if (caracidValue.endsWith('.bmp')) 
-        {
-         setSdFiles(currentFiles => [...currentFiles, caracidValue]);
-         console.log('SDCardData', caracidValue);
-       }
+  
+        // Parse f2height and f2width
+        const heightParsedF2 = parseInt(dimensions[2], 10);
+        const widthParsedF2 = parseInt(dimensions[3], 10);
+        if (!isNaN(heightParsedF2) && !isNaN(widthParsedF2)) {
+          setF2height(heightParsedF2); // Set f2 height
+          setF2width(widthParsedF2); // Set f2 width
+        } else {
+          console.error('Failed to parse height and width for f2.');
+        }
+      } else {
+        console.error("Invalid format: expected 'height1.width1.height2.width2'");
+      }
+    } // end of caracid3
+
+    if (service === serviceid1 && characteristic === caracid4) {
+      const caracid4Value = bytesToString(value);
+    
+      // Split the value by dot (.) to get all the height and width values
+      const dimensions = caracid4Value.split('.');
+    
+      // Ensure we have exactly 2 values (pcount, pcount1)
+      if (dimensions.length === 2) {
+        // Parse pic1 and pic2
+        const piccount1 = parseInt(dimensions[0], 10);
+        const piccount2 = dimensions[1] === "" ? 0 : parseInt(dimensions[1], 10); // Handle empty string for piccount2
+    
+        if (!isNaN(piccount1) && !isNaN(piccount2)) {
+          setPCount(piccount1); // Set pic1
+          setPCount1(piccount2); // Set pic2
+        } else {
+          console.error('Failed to parse height and width for f1.');
+        }
+    
+        // Ensure you log the updated values
+        console.log('pcount:', piccount1);
+        console.log('pcount1:', piccount2);
+      }
+    }    // end of caracid4
+    if (service === serviceid2 && characteristic === caracid5) {
+      const caracid5Value = bytesToString(value);
+      console.log('caracid5:', caracid5Value);
+    } // end of caracid5
+    if (service === serviceid2 && characteristic === caracid6) {
+      const caracid6Value = bytesToString(value);
+      console.log('caracid6:', caracid6Value);
+    } //end of caracid6
+    if (service === serviceid2 && characteristic === caracid7) {
+      const caracid7Value = bytesToString(value);
+      console.log('caracid7:', caracid7Value);
+    } // end of caracid7
+    
+    if (service === serviceid2 && characteristic === caracid8) {
+      const caracid8Value = bytesToString(value);
+      console.log('caracid8 Data:', caracid8Value);
+      
+      if (caracid8Value.startsWith('CH/')) {
+        const PreviousFile = caracid8Value.substring(3).replace(/^\/+/, ''); // Remove leading slashes
+        console.log('caracid8 prevFile:', PreviousFile);
+    
+        // Use `let` to allow reassignment
+        let cleanedFile = PreviousFile.replace(/\//g, '.'); // Replace slashes with dots
+        cleanedFile = cleanedFile.replace(/^\.+/, ''); // Remove any leading dots
+        cleanedFile = cleanedFile.replace(/\.+$/, ''); // Remove any trailing dots
+    
+        console.log('Cleaned File:', cleanedFile);
+    
+        // Remove any consecutive dots (..)
+        cleanedFile = cleanedFile.replace(/\.\./g, '.');
+    
+        // Split the string based on the dot separator
+        const fileParts = cleanedFile.split('.');
+    
+        // Check if there are the expected parts for the filenames
+        if (fileParts.length >= 2) {
+            // Handle the first file (33f.bmp)
+            const firstFile = fileParts[0] + '.' + fileParts[1]; // e.g., 33f.bmp
+            
+            // Handle the second file (brd.bmp), if it exists
+            const secondFile = fileParts.slice(2).join('.'); // Join remaining parts into the second file
+    
+            console.log('First File:', firstFile);
+            console.log('Second File:', secondFile);
+            const secfile = secondFile+"p";
+    
+            // Set the files as needed
+            setPrevFile(firstFile); // Set first filename to state variable
+            setNextFile(secfile); // Set second filename to state variable
+        } else {
+            console.log('Filename pattern is not as expected.');
+        }
     }
-        if (service === serviceid1 && characteristic === caracid3) 
-        {
-            const caracid3Value = bytesToString(value);
-            console.log("Raw byte array:", value); // Log the raw byte array for inspection
-            console.log("Converted caracid3Value:", caracid3Value); // Log the result of bytesToString
-            const dimensions = caracid3Value.split('.');
-            if (dimensions.length === 2) 
-            {
-                const heightParsed = parseInt(dimensions[0], 10);
-                const widthParsed = parseInt(dimensions[1], 10);
-                if (!isNaN(heightParsed) && !isNaN(widthParsed))
-                {
-                    setHeight(heightParsed);  // height
-                    setWidth(widthParsed);    // width
-                } else {
-                    console.error("Failed to parse height and width.");
-                }
-            } else {
-                console.error("Invalid format: expected 'height.width'");
-            }
-                console.log('caracid3 height:', height);
-                console.log('caracid3 width:', width);
+      if (caracid8Value.startsWith('AA/')) {
+        const dimensions = caracid8Value.substring(3).split('A');
+        if (dimensions.length === 3) {
+          const day = parseInt(dimensions[0], 10); // Extract the day value
+          const month = parseInt(dimensions[1], 10); // Extract the month value
+          const year = parseInt(dimensions[2], 10); // Extract the year value
+          // Store the values in the respective state variables
+          setLockedDate({day, month, year});
+  
+          // Optionally log the values to verify
+          console.log('Day:', day, 'Month:', month, 'Year:', year);
+        } else {
+          console.log(
+            'Invalid format: Expected 3 components (day, month, year).',
+          );
         }
-                if(service=== serviceid1 && characteristic===caracid4){
-                    const caracid4Value = bytesToString(value);
-                    const hight_int = parseInt(caracid4Value,10);
-                    console.log('hight_var:', caracid4Value);
-                    setPCount(hight_int);
-                    console.log('hight_int:', hight_int);
-                }
-                                if(service=== serviceid2 && characteristic===caracid5){
-                                const caracid5Value = bytesToString(value);
-                                console.log('caracid5:', caracid5Value);
-                                }
-                                    if(service=== serviceid2 && characteristic===caracid6){
-                                        const caracid6Value = bytesToString(value);
-                                        console.log('caracid6:', caracid6Value);
-                                        }  
-                                            if(service=== serviceid2 && characteristic===caracid7){
-                                                const caracid7Value = bytesToString(value);
-                                                console.log('caracid7:', caracid7Value);
-                                                }
-                                                    if (service === serviceid2 && characteristic === caracid8) 
-                                                    {
-                                                        const caracid8Value = bytesToString(value);
-                                                        console.log('caracid8:', caracid8Value);
-                                                        if (caracid8Value.startsWith('CH/')) 
-                                                        {
-                                                            const PreviousFile = caracid8Value.substring(3).replace(/^\/+/, '');
-                                                            console.log('caracid8:', PreviousFile);
-                                                            setPrevFile(PreviousFile);
-                                                        }
-                                                        // if (caracid8Value.startsWith('UN/')) 
-                                                        // {
-                                                        //     const UserName = caracid8Value.substring(3);
-                                                        //     console.log('caracid8:', UserName);
-                                                        //     setCustName(UserName);
-                                                        // }
-                                                        if (caracid8Value.startsWith('AA/')) 
-                                                        {
-                                                        const dimensions = caracid8Value.substring(3).split('A');
-                                                            if (dimensions.length === 3) 
-                                                            {
-                                                                const day = parseInt(dimensions[0], 10); // Extract the day value
-                                                                const month = parseInt(dimensions[1], 10); // Extract the month value
-                                                                const year = parseInt(dimensions[2], 10); // Extract the year value
-                                                        
-                                                                // Store the values in the respective state variables
-                                                                setLockedDate({day, month, year});
-                                                        
-                                                                // Optionally log the values to verify
-                                                                console.log('Day:', day, 'Month:', month, 'Year:', year);
-                                                            } else {
-                                                                    console.log('Invalid format: Expected 3 components (day, month, year).');
-                                                                    }
-                                                        }
-                                                        if (caracid8Value.trim().startsWith('CTL/')) 
-                                                        {
-                                                            const dimensions = caracid8Value.trim().substring(4).split('.'); // Use substring(4) to remove 'CTL/'
-                                                            console.log("After removing 'CTL/' and splitting by dot:", dimensions);
-                                                            if (dimensions.length === 3) 
-                                                            {
-                                                                const cardCount = parseInt(dimensions[0], 10); // card count
-                                                                const cnCount = parseInt(dimensions[1], 10); // connector count
-                                                                const ttlHook = parseInt(dimensions[2], 10); // total hooks
-                                                                console.log('Card Count:', cardCount);
-                                                                console.log('Connector Count:', cnCount);
-                                                                console.log('Total Hooks:', ttlHook);
-                                                                setCardCount(cardCount);
-                                                                setCnCount(cnCount);
-                                                                setTtlHook(ttlHook);
-                                                            } else {
-                                                                    console.error(
-                                                                    "Invalid format: expected 'CARD.CONNECTOR.THOOK', but got",
-                                                                    dimensions,
-                                                                    );
-                                                                }
-                                                        } else {
-                                                        console.error("Input string does not start with 'CTL/'");
-                                                        }
-                                                    };
-} // end of readAllCharDataFromEvent function
-
- 
-  // const handleGetConnectedDevices = () => {
-  //   BleManager.getDiscoveredPeripherals([]).then((result: any) => {
-  //     if (result.length === 0) {
-  //       console.log('No Device Found');
-  //       startScanning();
-  //     } else {
-  //       console.log('Results :', JSON.stringify(result));
-  //       const allDevices = result.filter((item: any) => item.name !== null);
-  //       setDevice(allDevices);
-  //       console.log('test Result from Handleconnection', allDevices);
-  //     }
-
-  //     // Success code
-  //     console.log('Discovered peripherals: ' + result);
-  //   });
-  // };
+      }
+      if (caracid8Value.trim().startsWith('CTL/')) {
+        const dimensions = caracid8Value.trim().substring(4).split('.'); // Use substring(4) to remove 'CTL/'
+        console.log("After removing 'CTL/' and splitting by dot:", dimensions);
+        if (dimensions.length === 3) {
+          const cardCount = parseInt(dimensions[0], 10); // card count
+          const cnCount = parseInt(dimensions[1], 10); // connector count
+          const ttlHook = parseInt(dimensions[2], 10); // total hooks
+          console.log('Card Count:', cardCount);
+          console.log('Connector Count:', cnCount);
+          console.log('Total Hooks:', ttlHook);
+          setCardCount(cardCount);
+          setCnCount(cnCount);
+          setTtlHook(ttlHook);
+        } else {
+          console.error(
+            "Invalid format: expected 'CARD.CONNECTOR.THOOK', but got",
+            dimensions,
+          );
+        }
+      }
+    } // end of caracid8
+  }; //end of readAllCharDataFromEvent
   
   
   //filter only ble devices start with marveljacquard
@@ -413,7 +408,10 @@ export const MyContextProvider: React.FC<{children: ReactNode}> = ({
         filteredDevices.forEach(bleDevice => {
           console.log('Local Name of the Device:', bleDevice.advertising?.localName);
           setLocalNamed(bleDevice.advertising?.localName)
-          fetchData(bleDevice.advertising?.localName);
+           // Only call fetchData if there is no data in AsyncStorage (i.e., if isDataInAsyncStorage is false)
+        if (!isDataInAsyncStorage) {
+          fetchData(bleDevice.advertising?.localName);  // Fetch data only if AsyncStorage is empty
+        }
           
       });
       }
@@ -435,21 +433,7 @@ export const MyContextProvider: React.FC<{children: ReactNode}> = ({
     }
   }, [isConnected]); // This will run every time isConnected changes
 
-  // const handlePress = () => {
-  //   if (currentDevice?.id === item?.id) {
-  //     if (isConnected) {
-  //       onDisconnect(item);
-  //       setIsConnected(false); // Update the connection status to false
-  //     } else {
-  //       onConnect(item);
-  //       setIsConnected(true); // Update the connection status to true
-  //     }
-  //   } else {
-  //     onConnect(item);
-  //     setIsConnected(true); // Automatically connect if it's not the current device
-  //   }
-  // };
- 
+   
   const renderItem = ({item}: any) => {
     return (
       <>
@@ -554,14 +538,6 @@ const stringToBytes = (str) => {
 
         const services = peripheralInfo.services;
         const characteristics = peripheralInfo.characteristics;
-
-        // const newServiceUUIDs = services.map(service => service.uuid);
-        // const newCharacteristicUUIDs = characteristics.map(characteristic => characteristic.uuid);
-  
-        // // Update state with new UUIDs
-        // setServiceUUIDs(newServiceUUIDs);
-        // setCharacteristicUUIDs(newCharacteristicUUIDs);
-
         services.forEach((service) => {
             const serviceUUID = service.uuid;
             onChangeCharacteristics(serviceUUID, characteristics, deviceId);
@@ -644,7 +620,28 @@ const writeHeightToChange = async (picNum) => {
         console.error('Error sending function call command:', error);
       });
   }
+}; // end of single pic change
+// start of double pic change
+const writeTwoHeightToChange = async (picNum1, picNum2) => {
+  if (isConnected) {
+    const rootDir = '*UP/';
+    const myCount1 = picNum1;
+    const myCount2 = picNum2;
+
+    const picCount = rootDir + myCount1+ "/" + myCount2;
+    console.log("converted pcount value",picCount);
+    const testRun = stringToBytes(picCount);
+    await BleManager.write(deviceId, serviceid1, caracid2, testRun)
+      .then(() => {
+        const results = bytesToString(testRun);
+        console.log('Function call command sent PicCount', results);
+      })
+      .catch(error => {
+        console.error('Error sending function call command:', error);
+      });
+  }
 };
+// end of double pic change
 
 const writeData = async (name) => {
   if (isConnected) {
@@ -663,7 +660,7 @@ const writeData = async (name) => {
 const writeFileToSelect = async (filename) => {
   if (isConnected) {
     const rootDir = 'CH/';
-    const fname = filename;
+    const fname = filename.replace(/\.[^/.]+$/, '');
     const fullName = rootDir + fname;
     console.log('Fullfilename with path', fullName);
     const testRun = stringToBytes(fullName);
@@ -678,11 +675,14 @@ const writeFileToSelect = async (filename) => {
   }
 };
 
-const writeUserNameToDevice = async (username) => {
+const writeDoubleFileToSelect = async (bodyFile, borderFile) => {
   if (isConnected) {
-    const rootDir = 'UN/';
-    const uname = username;
-    const fullName = rootDir + uname;
+    const rootDir = 'CH/';
+    const f1 = bodyFile.replace(/\.[^/.]+$/, '');
+    const f2 = borderFile.replace(/\.[^/.]+$/, '');
+    // const f1 = bodyFile.replace(/\.[^/.]+$/, '');
+    // const f2 = borderFile.replace(/\.[^/.]+$/, '');
+    const fullName = rootDir + f1+"/"+f2;
     console.log('Fullfilename with path', fullName);
     const testRun = stringToBytes(fullName);
     await BleManager.write(deviceId, serviceid1, caracid2, testRun)
@@ -717,24 +717,7 @@ const deleteFile = async (filename) => {
   }
 };
 
-// const deleteFile = async (filename) => {
-//   if (isConnected) {
-//     const rootDir = 'DL/';
-//     const fname = filename;
-//     const fullName = rootDir + fname;
-//     console.log('Fullfilename with path', fullName);
-//     const testRun = stringToBytes(fullName);
-//     await BleManager.write(deviceId, serviceid1, caracid2, testRun)
-//       .then(() => {
-//         const results = bytesToString(testRun);
-//         console.log('Function call command sent File', results);
-//         ToastAndroid.show("File Deleted Successfully!", ToastAndroid.SHORT);
-//       })
-//       .catch(error => {
-//         console.error('Error sending function call command:', error);
-//       });
-//   }
-// };
+
 const writeClcnCount = async (countvalue) => {
   if (isConnected) {
     const testRun = stringToBytes(countvalue);
@@ -766,14 +749,19 @@ const leftRightSelect = async (lrval) => {
   }
 };
 
-const setLockDate = async (dval,mval,yval) => {
+const setLockDate = async (dval, mval, yval) => {
   if (isConnected) {
     const rootDir = 'AA/';
     const temp_str = 'A';
-    const dvalue = dval;
-    const mvalue = mval;
-    const yvalue = yval;
+    console.log(dval);
+    // Trim any unwanted spaces
+    const dvalue = dval.trim();  // Trimming spaces
+    const mvalue = mval.trim();  // Trimming spaces
+    const yvalue = yval.trim();  // Trimming spaces
+
+    // Concatenate the date values correctly
     const full_dtval = rootDir + dvalue + temp_str + mvalue + temp_str + yvalue;
+
     console.log('Full Date Value with path', full_dtval);
     const testRun = stringToBytes(full_dtval);
     await BleManager.write(deviceId, serviceid1, caracid2, testRun)
@@ -803,78 +791,86 @@ const unLockMachine = async () => {
   }
 };
 
-// Fetch data on initial render
-   // Function to fetch data from API using localName
-  //  useEffect(() => {
-   const fetchData = async (localName: string) => {
+useEffect(() => {
+  const checkAsyncStorage = async () => {
+    const cachedData = await AsyncStorage.getItem('localName'); // Replace with your key
+    if (cachedData) {
+      setIsDataInAsyncStorage(true);  // Data found in AsyncStorage
+      const parsedData = JSON.parse(cachedData);
+      setWebData(parsedData);
+      setWebDataLocal(parsedData);
+      console.log('user Id,{userData[0].usr_id}');
+    } else {
+      setIsDataInAsyncStorage(false); // No data in AsyncStorage
+    }
+  };
+
+  checkAsyncStorage();
+}, []);
+
+  
+  const fetchData = async (localName: string) => {
     const source = axios.CancelToken.source();
     try {
       console.log('Fetching data for localName:', localName);
       setLoading(true);
-       // Set a timeout to limit the wait time for the API call
-       const timeoutId = setTimeout(() => {
+  
+      // Check if data is present in AsyncStorage first
+      const cachedData = await AsyncStorage.getItem(localName);
+      if (cachedData) {
+        // If data exists in AsyncStorage, use it and avoid fetching
+        console.log('Using cached data:', JSON.parse(cachedData));
+        const parsedData = JSON.parse(cachedData);
+        setWebData(parsedData);  // Set context with cached data
+        setWebDataLocal(parsedData);
+        setIsDataInAsyncStorage(true);  // Data exists in AsyncStorage
+        setLoading(false);  // Stop loading
+        return;  // Exit the function early
+      }
+  
+      // Set a timeout to limit the wait time for the API call
+      const timeoutId = setTimeout(() => {
         source.cancel('Request timed out'); // Cancel the request after the timeout
       }, 5000); // Timeout after 5 seconds (5000 ms)
-      // Pass the localName as a query parameter
+  
+      // If no cached data, proceed with API request
       const response = await axios.get('http://redsap.org/apis.php', {
-        params: { localName }, // Add localName to the request params
+        params: { localName },
         cancelToken: source.token,
       });
+  
       clearTimeout(timeoutId);
-      // const response = await fetch(`http://redsap.org/apis.php?name=${localName}`);
-      console.log('Fetched data:', response.data);  // Log the fetched data to check its structure
-      setWebData(response.data);  // Update context with fetched data
-      setWebDataLocal(response.data);
-      if (!response.data) {
+      console.log('Fetched data:', response.data);
+  
+      // If fetched data is valid, update context and store it in AsyncStorage
+      if (response.data) {
+        setWebData(response.data);  // Update context with fetched data
+        setWebDataLocal(response.data);
+        
+        // Store the fetched data in AsyncStorage for future use
+        await AsyncStorage.setItem(localName, JSON.stringify(response.data));
+        setIsDataInAsyncStorage(true);  // Mark that data is now in AsyncStorage
+      } else {
         throw new Error('No data received');
       }
-
-      // setWebData(response.data);  // Update context with fetched data
-      // setWebDataLocal(response.data);
-      
+  
     } catch (err) {
       if (axios.isCancel(err)) {
         console.log('Request cancelled due to timeout');
       } else {
-      console.error('Error occurred:', err);  // Log error for debugging
-      setError(err.message);
-      setTimeout(() => {
-        Alert.alert('Error', `Something went wrong: ${err.message}`);  // Display error alert
-      }, 100); // Delay of 100ms
-    } 
+        console.error('Error occurred:', err);
+        setError(err.message);
+        setTimeout(() => {
+          Alert.alert('Error', `Something went wrong: ${err.message}`);
+        }, 100);
+      }
     } finally {
       setLoading(false);
     }
   };
-  // fetchData(localName);
-  // }, [setWebData]);
-// useEffect(() => {
-//   const fetchData = async () => {
-//     try {
-//       console.log('Fetching data...');
-//       const response = await axios.get('http://redsap.org/api.php'); // API call
-//       console.log('Fetched data:', response.data);  // Log the fetched data to check its structure
-      
-//       if (!response.data) {
-//         throw new Error('No data received');
-//       }
+  
 
-//       setWebData(response.data);  // Update context with fetched data
-//       setWebDataLocal(response.data);  // Local state update
 
-//     } catch (err) {
-//       console.error('Error occurred:', err);  // Log error for debugging
-//       setError(err.message);
-//       setTimeout(() => {
-//         Alert.alert('Error', `No Internet Connection Something went wrong: ${err.message}`);  // Display error alert
-//       }, 100); // Delay of 100ms
-//     } finally {
-//       setLoading(false);
-//     }
-//   };
-
-//   fetchData();
-// }, [setWebData]); // Dependency on setWebData
 // While loading, show an activity indicator
 // UseEffect to log `webData` after it has been updated
 useEffect(() => {
@@ -891,25 +887,7 @@ if (loading) {
   );
 }
 
-// If there is an error, display the error message without disrupting the UI
-// if (error) {
-//   return (
-//     <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-//       <Text style={{ color: 'red', fontSize: 18 }}>Error: {error}</Text>
-//       {/* You can show a fallback UI here */}
-//     </View>
-//   );
-// }
-//  Find the user with id: 3
-// console.log('localName:', localNamed);  // Check the value of localName
-// const user = webData.find(item => item.usr_name === localNamed);
-// const usernamed = user ? user.usr_name : 'user not found';
-// console.log(user);
- //  If user with id: 3 exists, display their password, else display an error message
-  // const userPassword = user ? user.usr_pwd : 'User not found';
-  // console.log (userPassword);
-  // const usernamed= user ? user.usr_name : 'user not found';
-  // console.log(usernamed); 
+
   
   return (
     // screenView(),
@@ -918,6 +896,7 @@ if (loading) {
       value={{
         ReadHeightwidth,
         writeHeightToChange,
+        writeTwoHeightToChange,
         stringToBytes,
         bleDevice,
         isScanning,
@@ -930,9 +909,13 @@ if (loading) {
         setSdFiles,
         prevFile,
         setPrevFile,
+        nextFile,
+        setNextFile,
         rpmValue,
         pCount,
-        setPCount,  
+        setPCount,
+        pCount1, 
+        setPCount1,
         startScanning,
         onConnect,
         onDisconnect,
@@ -944,13 +927,18 @@ if (loading) {
         strRpm,
         setStrRpm,
         writeFileToSelect,
+        writeDoubleFileToSelect,
         strFiles,
         data,
         setData,
-        height,
-        setHeight,
-        width,
-        setWidth,
+        f1height,
+        setF1height,
+        f1width,
+        setF1width,
+        f2height,
+        setF2height,
+        f2width,
+        setF2width,
          webData,
          setWebData,
          webDataLocal,
@@ -973,8 +961,8 @@ if (loading) {
     setLockDate,
     lockedDate, 
     setLockedDate,
-    writeUserNameToDevice,
     custName,
+    localNamed,
     setCustName,
     custPwd,
     setCustPwd,

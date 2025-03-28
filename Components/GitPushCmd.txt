@@ -1,6 +1,0 @@
-1. git init
-2. git status
-3. git add .
-4. git commit -m "nextcommit_month"
-5. git branch -M main
-6. git push -u -f origin main

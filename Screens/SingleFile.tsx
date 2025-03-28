@@ -1,5 +1,4 @@
 import React, {useState,useEffect, useCallback} from 'react';
-import globalStyles from '../assets/GlobalValues/Global';
 import {
   SafeAreaView,
   Image,
@@ -20,16 +19,16 @@ import {useMyContext} from '../Components/MyContext';
 import {ScrollView} from 'react-native-gesture-handler';
 import { useTranslation } from 'react-i18next'; // Hook to access translation
 import '../services/i18n';
-import i18next from "i18next";
 
-const HomeScreen: React.FC = () => {
+
+const SingleFile: React.FC = () => {
   
   const { t, i18n } = useTranslation();
   const [isOverlayVisible, setOverlayVisible] = useState(false);
   const [imageUri, setImageUri] = useState(null);
   const [loading, setLoading] = useState(false); // To track the loading state
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [text, setText] = useState(false);
+ 
   const {
     sdFiles,
     rpmValue,
@@ -37,8 +36,8 @@ const HomeScreen: React.FC = () => {
     setPCount,
     writeFileToSelect,
     writeHeightToChange,
-    height,
-    width,
+    f1height,
+    f1width,
     prevFile,
     setPrevFile,
     cardCount,
@@ -76,14 +75,17 @@ useEffect(() => {
   const handleIncrement = () => {
     
     setPCount(prevHeight => {
-      const incrementedHeight = prevHeight + 1;
+      // const incrementedHeight = prevHeight + 1;
+      const incrementedHeight = prevHeight === f1height ? 1 : prevHeight + 1;
       return incrementedHeight; // Return the new height for state update
       
     });
   };
   const handleDecrement = () => {
+    const minValue = 1;
     setPCount(prevHeight => {
-      const decrementdHeight = prevHeight - 1;
+      // const decrementdHeight = prevHeight - 1;
+      const decrementdHeight = prevHeight === minValue ? f1height : prevHeight - 1;
       return decrementdHeight; // Return the new height for state update
     });
   };
@@ -172,27 +174,7 @@ useEffect(() => {
   const toggleOverlay = () => {
     setOverlayVisible(!isOverlayVisible);
   };
-  const handleLongPress = () => {
-    // Display the alert box on long press
-    Alert.prompt(
-      'Input Number',            // Title of the alert box
-      'Enter a number:',         // Message displayed in the alert box
-      [
-        {
-          text: 'Cancel',        // Cancel button
-          style: 'cancel',
-        },
-        {
-          text: 'OK',            // OK button
-          onPress: (inputText) => {
-            setPCount(inputText); // Store the input value in pCount state (updates the TextInput)
-          },
-        },
-      ],
-      'plain-text',              // Type of input (plain-text here)
-      pCount                     // Default value (current pCount value)
-    );
-  };
+  
   return (
     <View style={styles.container}>
     
@@ -242,7 +224,7 @@ useEffect(() => {
               marginLeft: 10,
               marginRight: 10,
               borderWidth:1,
-              borderColor:'#812892',
+              borderColor:'#F5EDF6',
               textAlign: 'center', // Horizontally center text
               textAlignVertical: 'center',
             }}>
@@ -261,7 +243,7 @@ useEffect(() => {
         </View>
         <View>
           <Text style={{marginBottom:10, textAlign: 'center', fontWeight: 'bold', fontSize: 20, color: '#000000', fontFamily: 'apercumovistarbold'}}>
-          {t('Height')}: {width} / {t('Width')}: {height}
+          {t('Height')}: {f1width} / {t('Width')}: {f1height}
           </Text>
           <View>
             <Text style={{marginBottom: 10, textAlign: 'center', fontWeight: 'bold', fontSize: 14, color: '#000000', fontFamily: 'Roboto'}}>{t('Cards')}: {cardCount} / {t('Connectors')}: {cnCount} / {t('Total Hooks')}: {ttlHook}</Text>
@@ -284,7 +266,7 @@ useEffect(() => {
         <RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} />
       }
     >
-      <View style={styles.container}>
+      <View style={styles.imgcontainer}>
       {loading ? (
         <Animated.View style={{ transform: [{ rotate }] }}>
           <View style={styles.spinner}></View>
@@ -303,11 +285,13 @@ useEffect(() => {
           justifyContent: 'space-between',
           alignItems: 'center',
           marginLeft: -220,
-          marginTop:270,
+          marginTop:240,
         }}>
         <View>
-          <Text style={{fontFamily: 'Technology-Bold', fontSize: 70, color: 'purple', marginTop: -8}}>{rpmValue}</Text>
-          <Text style={{ fontFamily: 'Technology-Bold', fontSize: 30, color: 'purple', marginTop: 5 }}>RPM</Text>
+          <Text style={styles.rpmValue}>
+                      {rpmValue}
+                    </Text>
+          {/* <Text style={{ fontFamily: 'Technology-Bold', fontSize: 30, color: 'purple', marginTop: 5 }}>RPM</Text> */}
         </View>
         <View
           style={{
@@ -348,7 +332,7 @@ const styles = StyleSheet.create({
     // justifyContent: 'center',
     alignItems: 'center',
   },
-  digitalText: {
+   digitalText: {
     fontSize: 60,
     color: '#00FF00', // Green color for digital look
     fontFamily: 'digital-7', // Use the font name as it appears inside the font file
@@ -394,7 +378,7 @@ const styles = StyleSheet.create({
   closeButton: {
     position: 'absolute',
     bottom: 10, // Adjust for vertical spacing
-    right: 8, // Adjust for horizontal spacing
+    right: 15, // Adjust for horizontal spacing
     width: 50,
     height: 50,
     backgroundColor: '#812892',
@@ -410,7 +394,7 @@ const styles = StyleSheet.create({
   floatingButton: {
     position: 'absolute',
     bottom: 10, // Adjust for vertical spacing
-    right: 8, // Adjust for horizontal spacing
+    right: 1, // Adjust for horizontal spacing
     width: 50,
     height: 50,
     backgroundColor: '#812892',
@@ -436,6 +420,20 @@ const styles = StyleSheet.create({
     height: 250,
     marginTop: 20,
   },
+  imgcontainer:{
+    width: '100%',
+    height: 250,
+  },
+  rpmValue: {
+    fontFamily: 'Technology-Bold',
+    fontSize: 70,
+    color: 'purple',
+    position: 'relative',
+    marginTop: 50,
+    marginLeft: -15,
+    marginRight: 10,
+    bottom: -10,
+  },
 });
 
-export default HomeScreen;
+export default SingleFile;

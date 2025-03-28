@@ -25,6 +25,7 @@ const FilesScreen: React.FC<{navigation: any}> = ({navigation}) => {
   const {
     deleteFile,
     webData,
+    localNamed,
   } = useMyContext();
   const { t, i18n } = useTranslation();
   const [modalVisible, setModalVisible] = useState(false);
@@ -81,11 +82,6 @@ const userPassword = user ? user.usr_pwd : 'User not found';
     } else {
       setErrorMessage('Invalid password. Please try again.'); // Show error message
       console.log('Invalid password. Please try again.'); // Show error message
-      // Alert.alert(
-      //   'Owner', // Title
-      //   'Invalid password. Please try again.', // Message
-      //   [{ text: 'OK', onPress: () => console.log('OK Pressed') }] // Button
-      // );
     }
   };
   useEffect(() => {
@@ -160,7 +156,12 @@ const userPassword = user ? user.usr_pwd : 'User not found';
   const fetchFiles = async () => {
     setLoading(true);
     try {
-      const response = await axios.get('http://192.168.4.1/list-files');
+      // const response = await axios.get('http://192.168.4.1/list-files');
+      const response = await axios.get('http://192.168.4.1/list-files', {
+        headers: {
+            'Cache-Control': 'no-cache', // Prevent caching
+        },
+      });
       const fileLines = response.data.split('\n').filter(line => line); // Splitting lines and filtering empty lines
       setFiles(fileLines);
       setError('');
@@ -196,6 +197,7 @@ const userPassword = user ? user.usr_pwd : 'User not found';
       <FlatList
         keyExtractor={(item, index) => item.id ? item.id.toString() : index.toString()}
         data={files}
+        extraData={files}
         renderItem={({item}) => (
           // console.log(item),
           <>

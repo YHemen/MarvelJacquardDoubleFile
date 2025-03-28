@@ -31,7 +31,7 @@ const ScanningScreen =(props) =>{
   useEffect(() => {
     if (isConnected) {
       // Navigate to HomeScreen after successful connection
-      navigation.navigate('HomeScreen');
+      navigation.navigate('Home Screen');
     }
   }, [isConnected, navigation]); // Dependency on isConnected and navigation
 

@@ -103,7 +103,7 @@ const ProductsScreen = () => {
   // Handle back press event for navigation
   useEffect(() => {
     const handleBackPress = () => {
-      navigation.navigate('HomeScreen');
+      navigation.navigate('Home Screen');
       return true;
     };
     BackHandler.addEventListener('hardwareBackPress', handleBackPress);

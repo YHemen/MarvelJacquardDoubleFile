@@ -6,52 +6,33 @@ import { useFocusEffect } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next'; // Hook to access translation
 import '../services/i18n';
 import i18next from "i18next";
-import axios from 'axios';
-import qs from 'qs';
 const SettingsScreen:React.FC<{navigation: any}> = ({navigation}) => {
     const {
       unLockMachine,
-      currentDevice,
-      isConnected,
-      readLockStatus,
-      lockStatus,
       setLockStatus,
       cnCount,
       setCnCount,
       cardCount,
       setCardCount,
       ttlHook,
-    setTtlHook,
     writeClcnCount,
-    designDir,
     setDesignDir,
     leftRightSelect,
     prevFile,
     webData,
     webDataLocal,
     setLockDate,
-    writeUserNameToDevice,
-    custName,
-    setCustName,
     custPwd,
-    setCustPwd,
     lockedDate, 
-    setLockedDate,
     localNamed,
     } = useMyContext();
     const onColor = 'green';
   const offColor = 'red';
   const [isOn, setIsOn] = useState();
-  const [isOff, setIsOff] = useState();
   const [isLockOn, setIsLockOn] = useState();
-  const [isLockOff, setIsLockOff] = useState();
-  const [runningDesign, setRunningDesign] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
   const [inputText, setInputText] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
-  const [data, setData] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
   const [days, setDays] = useState('');
   const [months, setMonths] = useState('');
   const [years, setYears] = useState('');
@@ -60,8 +41,6 @@ const SettingsScreen:React.FC<{navigation: any}> = ({navigation}) => {
   const [daysLeft, setDaysLeft] = useState(0);
 
   const [isLoading, setIsLoading] = useState(false);
-  const initialValue = 8;
-  const finalValue = 22;
   const { day, month, year } = lockedDate;
   const { t, i18n } = useTranslation();
 
@@ -77,8 +56,8 @@ useEffect(() => {
   setModalVisible(true);
 }, []);
 
-const correctPassword = userPassword; // Define your authentication value here
-// const correctPassword = '142434'; // Define your authentication value here
+// const correctPassword = userPassword; // Define your authentication value here
+ const correctPassword = '123'; // Define your authentication value here
 useFocusEffect(
   React.useCallback(() => {
     // Show the modal whenever the screen is focused
@@ -197,6 +176,7 @@ const handleDecrement = () => {
     const yvalue = years;
     const mvalue = months;
     const dvalue = days;
+    console.log(dvalue);
     setLockDate(dvalue,mvalue,yvalue);
   }
 
@@ -258,45 +238,6 @@ const handleDecrement = () => {
     
   }, [lockedDate]);  // This will re-run whenever lockedDate changes
 
-
-
-  
-  // const changeCustName = async () =>{
-  //   if (!custName) {
-  //     ToastAndroid.show("Please enter a customer name", ToastAndroid.SHORT);
-  //     return;
-  //   }
-  //     setIsLoading(true);
-  
-  //   // try {
-  //   //   // Replace with the ESP32's IP address
-  //   //   const response = await axios.post('http://192.168.4.1/updateuser', {
-  //   //     cpu_name: custName, // Send the new customer name in the request body
-  //   //   });
-  //   const encoder = new TextEncoder();
-  //   const byteArray = encoder.encode(custName);
-
-  //   const response = await axios.post('http://192.168.4.1/updateuser', byteArray, {
-  //     headers: {
-  //       'Content-Type': 'application/octet-stream', // Tell the server it's a byte stream
-  //     },
-  //   });
-                
-  //     // Handle success response
-  //     console.log('Customer Name Updated:', response.data);
-  //     ToastAndroid.show("Customer Name changed Succesfully!", ToastAndroid.SHORT);
-  //   } catch (error) {
-  //     // Handle error
-  //     console.log("Customer Name", custName);
-  //     console.error('Error updating CPU name:', error);
-  //     // Alert.alert('Error', 'Failed to update CPU name');
-  //     ToastAndroid.show("Failed to update CPU name..", ToastAndroid.SHORT);
-  //   } finally {
-  //     setIsLoading(false);
-  //   }
-    
-  // }
-  
   const changeCustName = async () => {
     if (!custName) {
       ToastAndroid.show("Please enter a customer name", ToastAndroid.SHORT);
@@ -333,49 +274,18 @@ const handleDecrement = () => {
 
     return(
         <SafeAreaView style={styles.container}>
-            <View><Text style={{fontSize:20, color: '#000000', fontFamily: 'Roboto'}}>{t('User Settings')}..{webDataLocal.usr_name}</Text></View>
+            <View><Text style={{fontSize:20, color: '#000000', fontFamily: 'Roboto'}}>{t('User Settings')}</Text></View>
             <View style={{flexDirection: "row", marginBottom:10}} >
-                
             <View style={styles.inputContainer}>
-        <TextInput
-          style={{width:120}}
-          // value={custName}
-          onChangeText={handleNameChange}
-          placeholder={t('User Name')}
-        >
-          {''}
-          {webData.usr_name}
-        </TextInput>
-        <Icon name="user" size={20} color="#812892" style={styles.icon} />
+              <Text>User Name: {webData[0]?.usr_name}</Text>
+              {/* <Text>{webData[0]?.usr_name}</Text> */}
+            </View>
+            <View style={styles.inputContainer}>
+              <Text>Password :{webData[0]?.usr_pwd}</Text>
+              {/* <Text>yet to display</Text> */}
+            </View>
+            
       </View>
-      <View style={styles.inputContainer}>
-        <TextInput
-          style={{width:120,borderColor: 'gray'}}
-          // onChangeText={handlePwdChange}
-          placeholder={t('Enter Password')}
-          editable={false}
-        >
-          {''}
-          {custPwd}
-        </TextInput>
-        <Icon name="lock" size={20} color="#812892" style={styles.icon} />
-      </View>
-
-      <TouchableOpacity onPress={changeCustName} disabled={isLoading} style={{alignItems: 'center',justifyContent: 'space-evenly', paddingHorizontal: 10, backgroundColor:'#812892',width: 40,
-            height: 40,
-            borderRadius: 5,
-            borderColor: 'purple',
-            borderWidth:1,
-            marginLeft: 10,
-            marginRight: 10,
-            padding: 10,
-            marginTop:10,}}>
-      <View style={{flexDirection:"row",alignItems:'center'}}>
-        <Icon name="save" size={20} color="#EFDBFE" />
-      
-      </View>
-       
-      </TouchableOpacity></View>
       <View><Text style={{fontSize:20, color: '#000000', fontFamily: 'Roboto'}}>{t('Total Hooks')}</Text></View>
         <View style={{ flexDirection:'row',flex: 1, alignItems: 'center', justifyContent: 'space-evenly', paddingHorizontal: 10 }}>
         <Text style={{ textAlign: 'left', marginRight: 10, color: '#000000', fontFamily: 'Roboto' }}>{t('Cards Count')}     :</Text>
@@ -477,24 +387,17 @@ const handleDecrement = () => {
         {year}
       </TextInput>
         <TouchableOpacity onPress={handleDateSubmit} style={{backgroundColor:'purple', width: 80, height: 40, borderRadius:5,justifyContent:'space-around', alignItems:'center', marginRight: 1, marginLeft: 20}} >
-        {/* <Icon name="chevron-up" size={30} color="#812892" />  */}
         <Text style={{color:'white'}}>{t('Submit')}</Text>
         </TouchableOpacity>
       </View>
       
     </View>
-        {/* <View style={{ flexDirection:'row',flex: 1, alignItems: 'center', justifyContent: 'space-around'}}>
-         <Text style={{marginRight: 10,justifyContent:'center',alignItems:'center', fontSize:20}}>{t('Lock Date')}:</Text> 
-    <Text style={{justifyContent:'center',alignItems:'center', fontSize:20}}>{formattedDate.toString()}</Text>
-    </View> */}
+      
     <View style={{ flexDirection:'row',flex: 1, alignItems: 'center', justifyContent: 'space-around'}}>
          <Text style={{marginRight: 10,justifyContent:'center',alignItems:'center', fontSize:20, color: '#000000', fontFamily: 'Roboto'}}>{t('Count Down')}:</Text> 
-    {/* <Text style={{justifyContent:'center',alignItems:'center', fontSize:20}}>{year?.toString()}:Y{month?.toString()}:M{day?.toString()}:D</Text> */}
         <Text style={{justifyContent:'center',alignItems:'center', fontSize:20, color: '#000000', fontFamily: 'Roboto'}}>
         {yearsLeft}Y-{monthsLeft}M-{daysLeft}D
-        {/* {daysLeft !== 0 ? day?.toString() : "0"}-{" "}
-        {monthsLeft !== 0 ? month?.toString() : "0"}-{" "}
-        {yearsLeft !== 0 ? year?.toString() : "0"}{" "} */}
+       
       </Text>
     </View>
     <View style={styles.container} >

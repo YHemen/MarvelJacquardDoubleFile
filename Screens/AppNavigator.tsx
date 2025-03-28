@@ -1,7 +1,7 @@
 // AppNavigator.tsx
 // import React from 'react';
 import React, {useState,useEffect, useCallback} from 'react';
-import HomeScreen from './HomeScreen';
+import HomeScreen from './HomeScreenSingle';
 import ScanningScreen from './ScanningScreen';
 import FilesScreen from './FilesScreen';
 import TestRunScreen from './TestRunScreen';
@@ -11,7 +11,7 @@ import DetailsScreen from './DetailsScreen';
 import ExitScreen from './ExitScreen';
 import LoadingScreen from './LoadingScreen';
 import ProductsScreen from './ProductsScreen';
-import ServicesScreen from './ServicesScreen';
+import ControllerFile from './ControllerFile';
 import { useNavigation } from '@react-navigation/native';
 import {useMyContext} from '../Components/MyContext';
 import { NavigationContainer } from '@react-navigation/native';
@@ -68,7 +68,7 @@ const AppDrawer = ({isConnected}) => {
     if (isConnected) {
       // Set a timeout to navigate to HomeScreen after 8 seconds
       const timer = setTimeout(() => {
-        navigation.navigate('HomeScreen');
+        navigation.navigate('Home Screen');
       }, 8000); // 8000 milliseconds = 8 seconds
   
       // Clean up the timeout when the component unmounts or isConnected changes
@@ -139,7 +139,7 @@ const AppDrawer = ({isConnected}) => {
           title: t('ScanDevices'),
         }} 
       />
-      <Drawer.Screen 
+      {/* <Drawer.Screen 
         name= "HomeScreen" 
         // name={t('Home', { defaultValue: 'Home' })}
         component={HomeScreen} 
@@ -147,7 +147,14 @@ const AppDrawer = ({isConnected}) => {
           drawerIcon: ({ color, size }) => (<Icon name="home" color={color} size={size} />),
           title: t('HomeScreen')
         }} 
-      />
+      /> */}
+      <Drawer.Screen 
+        name={t('Home Screen')} 
+        component={ControllerFile} 
+        options={{
+          drawerIcon: ({ color, size }) => (<Icon name="home" color={color} size={size} />),
+        }} 
+      /> 
       <Drawer.Screen 
         name={t('Files')} 
         component={FilesScreen} 
@@ -176,13 +183,7 @@ const AppDrawer = ({isConnected}) => {
           drawerIcon: ({ color, size }) => (<Icon name="cogs" color={color} size={size} />),
         }} 
       />
-      <Drawer.Screen 
-        name={t('Exit')} 
-        component={ExitScreen} 
-        options={{
-          drawerIcon: ({ color, size }) => (<Icon name="sign-out" color={color} size={size} />),
-        }} 
-      />
+      
       {/* <Drawer.Screen 
         name={t('SelectLanguage')} 
         component={LanguageSelector} 
@@ -194,12 +195,12 @@ const AppDrawer = ({isConnected}) => {
         name={t('ProductsScreen')} 
         component={ProductsScreen} 
         options={{
-          drawerIcon: ({ color, size }) => (<Icon name="language" color={color} size={size} />),
+          drawerIcon: ({ color, size }) => (<Icon name="shopping-cart" color={color} size={size} />),
         }} 
       />
       {/* <Drawer.Screen 
-        name={t('ServicesScreen')} 
-        component={ServicesScreen} 
+        name={t('Home Screen')} 
+        component={ControllerFile} 
         options={{
           drawerIcon: ({ color, size }) => (<Icon name="language" color={color} size={size} />),
         }} 
@@ -209,6 +210,13 @@ const AppDrawer = ({isConnected}) => {
         component={LanguageSelector} 
         options={{
           drawerIcon: ({ color, size }) => (<Icon name="language" color={color} size={size} />),
+        }} 
+      />
+      <Drawer.Screen 
+        name={t('Exit')} 
+        component={ExitScreen} 
+        options={{
+          drawerIcon: ({ color, size }) => (<Icon name="sign-out" color={color} size={size} />),
         }} 
       />
     </Drawer.Navigator>

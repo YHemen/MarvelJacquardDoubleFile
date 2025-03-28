@@ -1,27 +1,53 @@
-import React, {useEffect} from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, TouchableOpacity, Text } from 'react-native';
 import { useTranslation } from 'react-i18next';  // Import the hook
-import i18next from "i18next";
-// import AsyncStorage from '@react-native-async-storage/async-storage';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
 
 const LanguageSelector: React.FC = () => {
-  const { t, i18n  } = useTranslation();  // Access the i18n instance
+  const [currLang, setCurrLang] = useState<string | null>(null);  // Initially set to null to check if language is fetched
+  const { t, i18n } = useTranslation();  // Access the i18n instance
+  
+  // Load the language from AsyncStorage when the component mounts
+  useEffect(() => {
+    const fetchStoredLanguage = async () => {
+      try {
+        const storedLang = await AsyncStorage.getItem('language');
+        if (storedLang) {
+          i18n.changeLanguage(storedLang);  // Change to the stored language if exists
+          setCurrLang(storedLang);  // Set the current language state
+        } else {
+          // Default language if no stored language is found
+          i18n.changeLanguage('en');
+          setCurrLang('en');
+        }
+      } catch (error) {
+        console.error('Error fetching language from AsyncStorage:', error);
+      }
+    };
 
-  const changeLanguage = (lang: string) => {
+    fetchStoredLanguage();  // Call the function to fetch the language when component mounts
+  }, [i18n]);  // Dependency on i18n to avoid infinite re-renders
+
+  // Change language and store it in AsyncStorage
+  const changeLanguage = async (lang: string) => {
     console.log(`Changing language to: ${lang}`);
     i18n.changeLanguage(lang);  // Change the language dynamically
-    console.log('Loaded resources:', i18next.store.data);
+    setCurrLang(lang);  // Update the current language state
+
+    try {
+      await AsyncStorage.setItem('language', lang);  // Store the selected language in AsyncStorage
+      console.log('Stored language:', lang);
+    } catch (error) {
+      console.error('Error saving language to AsyncStorage:', error);
+    }
   };
 
-   // Change language and store it in AsyncStorage
-  //  const changeLanguage = async (lang: string) => {
-  //   console.log(`Changing language to: ${lang}`);
-  //   i18n.changeLanguage(lang);  // Change the language dynamically
-  //   await AsyncStorage.setItem('language', lang);  // Save the selected language to AsyncStorage
-  //   console.log('Loaded resources:', i18next.store.data);
-  // };
+  // If the language is not yet loaded, show a loading indicator
+  if (currLang === null) {
+    return <Text>Loading...</Text>;  // You can replace this with any loading indicator
+  }
 
-  
   return (
     <View style={styles.container}>
       <TouchableOpacity style={styles.btn} onPress={() => changeLanguage('en')}>
@@ -39,32 +65,16 @@ const LanguageSelector: React.FC = () => {
       <TouchableOpacity style={styles.btn} onPress={() => changeLanguage('ta')}>
         <Text style={styles.txt}>Tamil</Text>
       </TouchableOpacity>
-      
     </View>
   );
 };
 
 const styles = StyleSheet.create({
-  scrollView: {
-    flex: 1, // Make the ScrollView take up the entire screen
-  },
   container: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: '#EFDBFE',
-  },
-  
-  bleCard: {
-    width: '90%',
-    padding: 10,
-    alignSelf: 'center',
-    marginVertical: 10,
-    backgroundColor: '#812892',
-    elevation: 5,
-    borderRadius: 5,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
   },
   txt: {
     fontFamily: 'Raleway',
@@ -74,12 +84,6 @@ const styles = StyleSheet.create({
     alignContent: 'center',
     textAlignVertical: 'center',
   },
-  btntxt: {
-    fontFamily: 'Raleway',
-    fontStyle: 'normal',
-    fontWeight: '900',
-    color: '#812892',
-  },
   btn: {
     width: 100,
     height: 40,
@@ -87,13 +91,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderRadius: 5,
     backgroundColor: '#812892',
-
     padding: 10,
     alignSelf: 'center',
     marginVertical: 10,
-    
     elevation: 5,
-    
   },
 });
 
